@@ -1,417 +1,430 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import {useDropzone} from  "react-dropzone";
 import axios from "axios";
 
-export default function QuestionsForm() {
+const QuestionsForm = () => {
   const [subjects, setSubjects] = useState([]);
-  const [selectedSubject, setSelectedSubject] = useState("");
-  const [newSubject, setNewSubject] = useState("");
   const [chapters, setChapters] = useState([]);
-  const [selectedChapter, setSelectedChapter] = useState("");
-  const [newChapter, setNewChapter] = useState("");
   const [subtopics, setSubtopics] = useState([]);
+  
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedChapter, setSelectedChapter] = useState("");
   const [selectedSubtopic, setSelectedSubtopic] = useState("");
-  const [newSubtopic, setNewSubtopic] = useState("");
-  const [questionType, setQuestionType] = useState("MCQ");
-  const [question, setQuestion] = useState("");
-  const [questionImage, setQuestionImage] = useState(null);
-  const [options, setOptions] = useState([{ text: "", image: null }, { text: "", image: null }, { text: "", image: null }, { text: "", image: null }]);
-  const [solution, setSolution] = useState("");
-  const [solutionImage, setSolutionImage] = useState(null);
-  const [message, setMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [newSubjects, setNewSubjects] = useState([]); 
+  const [newChapters, setNewChapters] = useState([]); 
+  const [newSubtopics, setNewSubtopics] = useState([]); 
+  const [inputValues, setInputValues] = useState({
+    subject: "",
+    chapter: "",
+    subtopic: "",
+  });  
+  const [questionType, setQuestionType] = useState("");
+  const [question, setQuestion] =useState("");
+  const [formData, setFormData] = useState({
+    questionText: "",
+    questionImage: null,
+    options: { A: "", B: "", C: "", D: "" },
+    optionImages: { A: null, B: null, C: null, D: null },
+    solution: "",
+    solutionImage: null,
+  });
+
+  const [errors, setErrors] = useState({});
+  const [isFormValid, setIsFormValid] = useState(false);
 
   useEffect(() => {
-    axios.get("http://localhost:5000/api/questions")
-      .then((response) => {
-        setSubjects(response.data);
-      })
-      .catch((error) => {
-        console.error("Error fetching questions:", error);
-      });
+    fetchSubjects();
   }, []);
 
-  const handleSubjectChange = (e) => {
-    const selected = e.target.value;
-    setSelectedSubject(selected);
-    setNewSubject("");
-    const subject = subjects.find((s) => s.name === selected);
-    setChapters(subject ? subject.chapters : []);
-    setSelectedChapter("");
-    setSubtopics([]);
-    setSelectedSubtopic("");
+  const fetchSubjects = async () => {
+    try {
+      const response = await axios.get("/api/subjects");
+      setSubjects(response.data);
+    } catch (error) {
+      console.error("Error fetching subjects", error);
+    }
   };
 
-  const handleChapterChange = (e) => {
-    const selected = e.target.value;
-    setSelectedChapter(selected);
-    setNewChapter("");
-    const chapter = chapters.find((c) => c.name === selected);
-    setSubtopics(chapter ? chapter.subtopics : []);
-    setSelectedSubtopic("");
+  const fetchChapters = async (subjectId) => {
+    try {
+      const response = await axios.get(`/api/chapters/${subjectId}`);
+      setChapters(response.data);
+    } catch (error) {
+      console.error("Error fetching chapters", error);
+    }
   };
 
-  const handleSubtopicChange = (e) => {
-    setSelectedSubtopic(e.target.value);
-    setNewSubtopic("");
+  const fetchSubtopics = async (chapterId, subjectId) => {
+    if (!chapterId || !subjectId) {
+        console.error("❌ Missing chapterId or subjectId:", { chapterId, subjectId });
+        return;
+    }
+
+    try {
+        const response = await axios.get(`/api/subtopics/${chapterId}/${subjectId}`);
+        setSubtopics(response.data);
+        console.log("✅ Fetched subtopics:", response.data);
+    } catch (error) {
+        console.error("❌ Error fetching subtopics", error);
+    }
+};
+  const handleAddItem = (type) => {
+    const value = inputValues[type].trim();
+    if (!value) return;
+
+    const newItem = { _id: Date.now().toString(), name: value };
+
+    if (type === "subject") setNewSubjects((prev) => [...prev, newItem]);
+    if (type === "chapter") setNewChapters((prev) => [...prev, newItem]);
+    if (type === "subtopic") setNewSubtopics((prev) => [...prev, newItem]);
+
+    setInputValues({ ...inputValues, [type]: "" });
+  };
+  
+  const handleSelectionChange = (type, value) => {
+    if (type === "subject") {
+      setSelectedSubject(value);
+      setSelectedChapter("");
+      setSelectedSubtopic("");
+      setChapters([]);
+      setSubtopics([]);
+      if (value) fetchChapters(value);
+    } else if (type === "chapter") {
+      setSelectedChapter(value);
+      setSelectedSubtopic("");
+      setSubtopics([]);
+      if (value) fetchSubtopics(value);
+    } else if (type === "subtopic") {
+      setSelectedSubtopic(value);
+    }
   };
 
-  const handleOptionChange = (index, field, value) => {
-    const newOptions = [...options];
-    newOptions[index][field] = value;
-    setOptions(newOptions);
+  const handleInputChange = (type, e) => {
+    setInputValues({ ...inputValues, [type]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const formData = new FormData();
-    formData.append('subject', selectedSubject);
-    formData.append('chapter', selectedChapter);
-    formData.append('subtopic', selectedSubtopic);
-    formData.append('questionData', JSON.stringify({
-      type: questionType,
-      question: { text: question },
-      options,
-      solution: { text: solution }
+  const handleFormInputChange = (e) => {
+    const { name, value } = e.target;
+    if (name.startsWith("option")) {
+      const key = name.split("_")[1];
+      setFormData(prev => ({
+        ...prev,
+        options: { ...prev.options, [key]: value },
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+  
+
+  const handleOptionChange = (key, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      options: { ...prev.options, [key]: value },
     }));
+  };
+  
 
-    if (questionImage) {
-      formData.append('questionImage', questionImage);
+  const handleFileUpload = useCallback((file, field) => {
+    if (file) {
+      setFormData((prev) => ({ ...prev, [field]: file }));
     }
-    if (solutionImage) {
-      formData.append('solutionImage', solutionImage);
-    }
+  }, []);
 
-    options.forEach((option, index) => {
-      if (option.image) {
-        formData.append(`optionImages`, option.image);
-      }
+  const {
+    getRootProps: getQuestionRootProps,
+    getInputProps: getQuestionInputProps,
+  } = useDropzone({
+    accept: "image/*",
+    onDrop: (acceptedFiles) => handleFileUpload(acceptedFiles[0], "questionImage"),
+  });
+
+  // Dropzone for Solution Image
+  const {
+    getRootProps: getSolutionRootProps,
+    getInputProps: getSolutionInputProps,
+  } = useDropzone({
+    accept: "image/*",
+    onDrop: (acceptedFiles) => handleFileUpload(acceptedFiles[0], "solutionImage"),
+  });
+  
+
+  const validateForm = () => {
+    let newErrors = {};
+    if (!selectedSubject) newErrors.subject = "Subject is required";
+    if (!selectedChapter) newErrors.chapter = "Chapter is required";
+    if (!selectedSubtopic) newErrors.subtopic = "Subtopic is required";
+    if (!formData.questionText) newErrors.questionText = "Question is required";
+    if (!formData.solution) newErrors.solution = "Solution is required";
+
+    setErrors(newErrors);
+    setIsFormValid(Object.keys(newErrors).length === 0);
+  };
+
+  useEffect(() => {
+    validateForm();
+  }, [selectedSubject, selectedChapter, selectedSubtopic, formData, questionType]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!isFormValid) return;
+
+    const formDataToSend = new FormData();
+    formDataToSend.append("subjectId", selectedSubject);
+    formDataToSend.append("chapterId", selectedChapter);
+    formDataToSend.append("subtopicId", selectedSubtopic);
+    formDataToSend.append("questionText", formData.questionText);
+    formDataToSend.append("questionType", questionType);
+    formDataToSend.append("solution", formData.solution);
+
+    if (formData.questionImage) formDataToSend.append("questionImage", formData.questionImage);
+    if (formData.solutionImage) formDataToSend.append("solutionImage", formData.solutionImage);
+
+    Object.entries(formData.options).forEach(([key, value]) => {
+      formDataToSend.append(`options[${key}]`, value);
     });
 
-    axios.post("http://localhost:5000/api/questions", formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
-    .then((response) => {
-      setMessage("Question and Solution added successfully!");
-      setErrorMessage("");
-      setQuestion("");
-      setQuestionImage(null);
-      setOptions([{ text: "", image: null }, { text: "", image: null }, { text: "", image: null }, { text: "", image: null }]);
-      setSolution("");
-      setSolutionImage(null);
-    })
-    .catch((err) => {
-      setErrorMessage("Error adding question. Please try again.");
-      setMessage("");
-      console.error("Error adding question:", err);
+    Object.entries(formData.optionImages).forEach(([key, value]) => {
+      if (value) formDataToSend.append(`optionImages[${key}]`, value);
     });
-  };
 
-  const handleAddNewSubject = (e) => {
-    if (e.key === "Enter" && newSubject) {
-      if (!subjects.find((subject) => subject.name === newSubject)) {
-        const newSubjects = [...subjects, { name: newSubject, chapters: [] }];
-        setSubjects(newSubjects);
-        setSelectedSubject(newSubject);
-        setNewSubject("");
-      }
+    // **Debugging Logs**
+    console.log("📌 Form Data being sent:");
+    console.log("Subject ID:", selectedSubject);
+    console.log("Chapter ID:", selectedChapter);
+    console.log("Subtopic ID:", selectedSubtopic);
+    console.log("Question Type:", questionType);
+    console.log("Form Data:", formDataToSend);
+
+    try {
+      await axios.post("http://localhost:5000/api/questions", formDataToSend);
+      alert("✅ Question added successfully!");
+    } catch (error) {
+      console.error("❌ Error submitting question", error);
     }
-  };
-
-  const handleAddNewChapter = (e) => {
-    if (e.key === "Enter" && newChapter) {
-      const subjectIndex = subjects.findIndex((subject) => subject.name === selectedSubject);
-      if (subjectIndex !== -1) {
-        const updatedSubjects = [...subjects];
-        if (!updatedSubjects[subjectIndex].chapters.find((chapter) => chapter.name === newChapter)) {
-          updatedSubjects[subjectIndex].chapters.push({ name: newChapter, subtopics: [] });
-          setSubjects(updatedSubjects);
-          setChapters(updatedSubjects[subjectIndex].chapters);
-          setSelectedChapter(newChapter);
-          setNewChapter("");
-        }
-      }
-    }
-  };
-
-  const handleAddNewSubtopic = (e) => {
-    if (e.key === "Enter" && newSubtopic) {
-      const subjectIndex = subjects.findIndex((subject) => subject.name === selectedSubject);
-      const chapterIndex = chapters.findIndex((chapter) => chapter.name === selectedChapter);
-      if (subjectIndex !== -1 && chapterIndex !== -1) {
-        const updatedSubjects = [...subjects];
-        if (!updatedSubjects[subjectIndex].chapters[chapterIndex].subtopics.find((subtopic) => subtopic.name === newSubtopic)) {
-          updatedSubjects[subjectIndex].chapters[chapterIndex].subtopics.push({ name: newSubtopic });
-          setSubjects(updatedSubjects);
-          setSubtopics(updatedSubjects[subjectIndex].chapters[chapterIndex].subtopics);
-          setSelectedSubtopic(newSubtopic);
-          setNewSubtopic("");
-        }
-      }
-    }
-  };
-
-  const handleFileChange = (e, index, field) => {
-    const file = e.target.files[0];
-    if (index !== undefined) {
-      handleOptionChange(index, field, file);
-    } else if (field === "solutionImage") {
-      setSolutionImage(file);
-    } else {
-      setQuestionImage(file);
-    }
-  };
-
-  const handleFileCancel = (index, field) => {
-    if (index !== undefined) {
-      const newOptions = [...options];
-      newOptions[index][field] = null;
-      setOptions(newOptions);
-    } else if (field === "solutionImage") {
-      setSolutionImage(null);
-    } else {
-      setQuestionImage(null);
-    }
-  };
-
+};
   return (
-    <form className="mt-4 max-w-7xl mx-auto" onSubmit={handleSubmit}>
-      <div className="mb-4">
-        <label className="block text-gray-700 font-medium">Subject *</label>
-        <input
+    <form
+      onSubmit={handleSubmit}
+      className="p-6 border border-gray-300 rounded-lg shadow-lg bg-white max-w-4xl mx-auto"
+    >
+      {/* Dropdown Selections */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        {/* Subject */}
+        <div>
+          <label className="block text-gray-700 font-medium mb-1">Subject</label>
+          <input type="text" value={inputValues.subject}
+            onChange={(e) => handleInputChange("subject", e)}
+            placeholder="Type or select a subject"
+            className="mb-2 p-2 border-gray-600 border"
+          />
+          <select
+            onChange={(e) => handleSelectionChange("subject", e.target.value)}
+            className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring focus:ring-blue-300 mb-2"
+          >
+            <option value="">Select Subject</option>
+            {subjects.concat(newSubjects).map((subj) => (
+              <option key={subj._id} value={subj._id}>
+                {subj.name}
+              </option>
+            ))}
+          </select>
+          {inputValues.subject && !subjects.concat(newSubjects).some((s) => s.name === inputValues.subject) && (
+            <button type="button" onClick={() => handleAddItem("subject")} className="bg-red-500 text-white p-1">
+              Dont worry, Add It!
+            </button>
+          )}
+        </div>
+  
+        {/* Chapter */}
+        <div>
+          <label className="block text-gray-700 font-medium mb-1">Chapter</label>
+          <input
           type="text"
-          value={newSubject}
-          onChange={(e) => setNewSubject(e.target.value)}
-          onKeyPress={handleAddNewSubject}
-          placeholder="Type or select a subject"
-          className="w-full border p-2 rounded-md mt-1"
-          list="subjects"
-        />
-        <datalist id="subjects">
-          {subjects.map((subject) => (
-            <option key={subject.name} value={subject.name}>
-              {subject.name}
-            </option>
-          ))}
-        </datalist>
-        <select value={selectedSubject} onChange={handleSubjectChange} className="w-full border p-2 rounded-md mt-1">
-          <option value="">Select Subject</option>
-          {subjects.map((subject) => (
-            <option key={subject.name} value={subject.name}>
-              {subject.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {selectedSubject && (
-        <div className="mb-4">
-          <label className="block text-gray-700 font-medium">Chapter *</label>
-          <input
-            type="text"
-            value={newChapter}
-            onChange={(e) => setNewChapter(e.target.value)}
-            onKeyPress={handleAddNewChapter}
-            placeholder="Type or select a chapter"
-            className="w-full border p-2 rounded-md mt-1"
-            list="chapters"
+          value={inputValues.chapter}
+          onChange={(e) => handleInputChange("chapter", e)}
+          placeholder="Type or select a chapter"
+          className="mb-2 p-2 border-gray-600 border"
           />
-          <datalist id="chapters">
-            {chapters.map((chapter) => (
-              <option key={chapter.name} value={chapter.name}>
-                {chapter.name}
-              </option>
-            ))}
-          </datalist>
-          <select value={selectedChapter} onChange={handleChapterChange} className="w-full border p-2 rounded-md mt-1">
+          <select
+            onChange={(e) => handleSelectionChange("chapter", e.target.value)}
+            className="w-full border border-gray-300 rounded-md p-2 disabled:bg-gray-200 focus:outline-none focus:ring focus:ring-blue-300 mb-2"
+          >
             <option value="">Select Chapter</option>
-            {chapters.map((chapter) => (
-              <option key={chapter.name} value={chapter.name}>
-                {chapter.name}
+            {chapters.concat(newChapters).map((chap) => (
+              <option key={chap._id} value={chap._id}>
+                {chap.name}
               </option>
             ))}
           </select>
+          {inputValues.chapter && !chapters.concat(newChapters).some((c) => c.name === inputValues.chapter) && (
+            <button type="button" onClick={() => handleAddItem("chapter")} className="bg-orange-500 text-white p-1">
+              Uh Chill, Add this too!.
+            </button>
+          )}
         </div>
-      )}
-
-      {selectedChapter && (
-        <div className="mb-4">
-          <label className="block text-gray-700 font-medium">Subtopic *</label>
+  
+        {/* Subtopic */}
+        <div>
+          <label className="block text-gray-700 font-medium mb-1">Subtopic</label>
           <input
             type="text"
-            value={newSubtopic}
-            onChange={(e) => setNewSubtopic(e.target.value)}
-            onKeyPress={handleAddNewSubtopic}
-            placeholder="Type or select a subtopic"
-            className="w-full border p-2 rounded-md mt-1"
-            list="subtopics"
-          />
-          <datalist id="subtopics">
-            {subtopics.map((subtopic) => (
-              <option key={subtopic.name} value={subtopic.name}>
-                {subtopic.name}
-              </option>
-            ))}
-          </datalist>
-          <select value={selectedSubtopic} onChange={handleSubtopicChange} className="w-full border p-2 rounded-md mt-1">
+            value={inputValues.subtopic}
+            onChange={(e) => handleInputChange("subtopic", e)}
+            placeholder="Type or select a chapter" 
+            className="mb-2 p-2 border-gray-600 border"
+            />
+          <select
+            onChange={(e) => handleSelectionChange("subtopic", e.target.value)}            
+            className="w-full border border-gray-300 rounded-md p-2 disabled:bg-gray-200 focus:outline-none focus:ring focus:ring-blue-300 mb-2"
+          >
             <option value="">Select Subtopic</option>
-            {subtopics.map((subtopic) => (
-              <option key={subtopic.name} value={subtopic.name}>
-                {subtopic.name}
+            {subtopics.concat(newSubtopics).map((sub) => (
+              <option key={sub._id} value={sub._id}>
+                {sub.name}
               </option>
             ))}
           </select>
+          {inputValues.subtopic && !subtopics.concat(newSubtopics).some((c) => c.name === inputValues.subtopic) && (
+            <button type="button" onClick={() => handleAddItem("subtopic")} className="bg-yellow-600 text-white p-1">
+              Oops, might be last one, Add.
+            </button>
+          )}
         </div>
-      )}
-
-      {selectedSubtopic && (
-        <div className="mb-4">
-          <label className="block text-gray-700 font-medium">Question Type *</label>
-          <select value={questionType} onChange={(e) => setQuestionType(e.target.value)} className="w-full border p-2 rounded-md mt-1">
+  
+        {/* Question Type */}
+        <div>
+          <label className="block text-gray-700 font-medium mb-1">Question Type</label>
+          <select
+            onChange={(e) => setQuestionType(e.target.value)}
+            value={questionType}
+            className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring focus:ring-blue-300"
+          >
+            <option value="">Select Type</option>
             <option value="MCQ">MCQ</option>
-            <option value="Fill in the Blanks">Fill in the Blanks</option>
-            <option value="Match the following">Match the following</option>
+            <option value="Fill in the blanks">Fill in the blanks</option>
           </select>
         </div>
-      )}
+      </div>
+  
+      {/* Question Section */}
+      <div className="border border-gray-300 rounded-md p-4 mb-4">
+        <label className="block text-gray-700 font-medium mb-2">Question</label>
+        <textarea
+          name="questionText"
+          value={formData.questionText}
+          onChange={handleFormInputChange}
+          className="w-full border border-gray-600 rounded-md p-2 mb-2 focus:outline-none focus:ring focus:ring-blue-300"
+          placeholder="Enter the question..."
+        />
+        <div className="w-full">
+      {/* Drag and Drop Area */}
+      <div className="w-full">
+          <div
+            {...getQuestionRootProps()}
+            className="h-24 p-4 border-2 border-dashed border-gray-300 rounded-md text-center cursor-pointer hover:bg-gray-100"
+          >
+            <input {...getQuestionInputProps()} />
+            <p className="text-gray-700">Drag & Drop your Image here.</p>
+          </div>
 
-      {selectedSubtopic && questionType === "MCQ" && (
-        <div className="grid grid-cols-3 gap-4">
-          <div className="col-span-1">
-            <div className="mb-4">
-              <label className="block text-gray-700 font-medium">Question *</label>
-              <textarea value={question} onChange={(e) => setQuestion(e.target.value)} className="w-full border p-2 rounded-md mt-1" />
-              {questionImage && (
-                <div className="mt-2 flex items-center">
-                  <span className="mr-2">{questionImage.name}</span>
-                  <button type="button" onClick={() => handleFileCancel()} className="text-red-600">
-                    Cancel
-                  </button>
-                </div>
-              )}
-              <input type="file" onChange={(e) => handleFileChange(e)} className="mt-2" />
+          {/* File Input as Backup */}
+          <input
+            type="file"
+            onChange={(e) => handleFileUpload(e.target.files[0], "questionImage")}
+            className="mt-2 block w-full text-sm text-gray-500 file:border file:border-gray-300 file:rounded-md file:py-1 file:px-2 file:bg-gray-100 file:text-gray-700"
+          />
+
+          {/* Image Preview */}
+          {formData.questionImage && (
+            <div className="mt-3">
+              <p className="text-sm text-gray-600">Preview:</p>
+              <img
+                src={URL.createObjectURL(formData.questionImage)}
+                alt="Uploaded"
+                className="mt-2 w-32 h-32 object-cover rounded-md border"
+              />
             </div>
-          </div>
-
-          <div className="col-span-1">
-            {options.map((option, index) => (
-              <div key={index} className="mb-4">
-                <label className="block text-gray-700 font-medium">{`Option ${String.fromCharCode(65 + index)}`}</label>
-                <textarea
-                  value={option.text}
-                  onChange={(e) => handleOptionChange(index, "text", e.target.value)}
-                  className="w-full border p-2 rounded-md mt-1"
-                />
-                {option.image && (
-                  <div className="mt-2 flex items-center">
-                    <span className="mr-2">{option.image.name}</span>
-                    <button type="button" onClick={() => handleFileCancel(index, "image")} className="text-red-600">
-                      Cancel
-                    </button>
-                  </div>
-                )}
-                <input type="file" onChange={(e) => handleFileChange(e, index, "image")} className="mt-2" />
-              </div>
-            ))}
-          </div>
-
-          <div className="col-span-1">
-            <div className="mb-4">
-              <label className="block text-gray-700 font-medium">Solution</label>
-              <textarea value={solution} onChange={(e) => setSolution(e.target.value)} className="w-full border p-2 rounded-md mt-1" />
-              {solutionImage && (
-                <div className="mt-2 flex items-center">
-                  <span className="mr-2">{solutionImage.name}</span>
-                  <button type="button" onClick={() => handleFileCancel(undefined, "solutionImage")} className="text-red-600">
-                    Cancel
-                  </button>
-                </div>
-              )}
-              <input type="file" onChange={(e) => handleFileChange(e, undefined, "solutionImage")} className="mt-2" />
+          )}
+        </div>
+      </div>
+  
+      {/* Options Section (Only for MCQ) */}
+      {questionType === "MCQ" && (
+        <div className="border border-gray-600 rounded-md p-4 mb-4">
+          <label className="block text-gray-700 font-medium mb-2">Options</label>
+          {["A", "B", "C", "D"].map((key) => (
+            <div key={key} className="flex items-center gap-4 mb-2">
+              <span className="text-gray-600 font-medium w-16">Option {key}</span>
+              <input
+                type="text"
+                placeholder={`Enter Option ${key}`}
+                onChange={(e) => handleOptionChange(key, e.target.value)}
+                className="flex-1 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring focus:ring-blue-300"
+              />
+              <input
+                type="file"
+                onChange={(e) => handleFileUpload(e, `optionImages[${key}]`)}
+                className="text-sm text-gray-500 file:border file:border-gray-300 file:rounded-md file:py-1 file:px-2 file:bg-gray-100 file:text-gray-700"
+              />
             </div>
-          </div>
+          ))}
         </div>
       )}
-
-      {selectedSubtopic && questionType === "Fill in the Blanks" && (
-        <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-1">
-            <div className="mb-4">
-              <label className="block text-gray-700 font-medium">Question *</label>
-              <textarea value={question} onChange={(e) => setQuestion(e.target.value)} className="w-full border p-2 rounded-md mt-1" />
-              {questionImage && (
-                <div className="mt-2 flex items-center">
-                  <span className="mr-2">{questionImage.name}</span>
-                  <button type="button" onClick={() => handleFileCancel()} className="text-red-600">
-                    Cancel
-                  </button>
-                </div>
-              )}
-              <input type="file" onChange={(e) => handleFileChange(e)} className="mt-2" />
-            </div>
+  
+      {/* Solution Section */}
+      <div className="border border-gray-300 rounded-md p-4 mb-4">
+    <label className="block text-gray-700 font-medium mb-2">Solution</label>
+    <textarea
+      name="solution"
+      value={formData.solution}
+      onChange={handleFormInputChange}
+      className="w-full border border-gray-600 rounded-md p-2 mb-2 focus:outline-none focus:ring focus:ring-blue-300"
+      placeholder="Enter the solution..."
+    />
+    {/* Drag and Drop Area */}
+    <div className="w-full">
+          <div
+            {...getSolutionRootProps()}
+            className="p-4 h-24 border-2 border-dashed border-gray-300 rounded-md text-center cursor-pointer hover:bg-gray-100"
+          >
+            <input {...getSolutionInputProps()} />
+            <p className="text-gray-700">Drag & Drop your Image here.</p>
           </div>
 
-          <div className="col-span-1">
-            <div className="mb-4">
-              <label className="block text-gray-700 font-medium">Solution</label>
-              <textarea value={solution} onChange={(e) => setSolution(e.target.value)} className="w-full border p-2 rounded-md mt-1" />
-              {solutionImage && (
-                <div className="mt-2 flex items-center">
-                  <span className="mr-2">{solutionImage.name}</span>
-                  <button type="button" onClick={() => handleFileCancel(undefined, "solutionImage")} className="text-red-600">
-                    Cancel
-                  </button>
-                </div>
-              )}
-              <input type="file" onChange={(e) => handleFileChange(e, undefined, "solutionImage")} className="mt-2" />
+          {/* File Input as Backup */}
+          <input
+            type="file"
+            onChange={(e) => handleFileUpload(e.target.files[0], "solutionImage")}
+            className="mt-2 block w-full text-sm text-gray-500 file:border file:border-gray-300 file:rounded-md file:py-1 file:px-2 file:bg-gray-100 file:text-gray-700"
+          />
+
+          {/* Image Preview */}
+          {formData.solutionImage && (
+            <div className="mt-3">
+              <p className="text-sm text-gray-600">Preview:</p>
+              <img
+                src={URL.createObjectURL(formData.solutionImage)}
+                alt="Uploaded"
+                className="mt-2 w-32 h-32 object-cover rounded-md border"
+              />
             </div>
-          </div>
+          )}
         </div>
-      )}
+    </div>
 
-      {selectedSubtopic && questionType === "Match the following" && (
-        <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-1">
-            <div className="mb-4">
-              <label className="block text-gray-700 font-medium">Question *</label>
-              <textarea value={question} onChange={(e) => setQuestion(e.target.value)} className="w-full border p-2 rounded-md mt-1" />
-              {questionImage && (
-                <div className="mt-2 flex items-center">
-                  <span className="mr-2">{questionImage.name}</span>
-                  <button type="button" onClick={() => handleFileCancel()} className="text-red-600">
-                    Cancel
-                  </button>
-                </div>
-              )}
-              <input type="file" onChange={(e) => handleFileChange(e)} className="mt-2" />
-            </div>
-          </div>
-
-          <div className="col-span-1">
-            <div className="mb-4">
-              <label className="block text-gray-700 font-medium">Solution</label>
-              <textarea value={solution} onChange={(e) => setSolution(e.target.value)} className="w-full border p-2 rounded-md mt-1" />
-              {solutionImage && (
-                <div className="mt-2 flex items-center">
-                  <span className="mr-2">{solutionImage.name}</span>
-                  <button type="button" onClick={() => handleFileCancel(undefined, "solutionImage")} className="text-red-600">
-                    Cancel
-                  </button>
-                </div>
-              )}
-              <input type="file" onChange={(e) => handleFileChange(e, undefined, "solutionImage")} className="mt-2" />
-            </div>
-          </div>
-        </div>
-      )}
-
-      <button className="mt-6 bg-cyan-600 text-white py-2 px-6 rounded-lg w-full hover:bg-cyan-700 transition">
-        Add Question and Solution
+  </div>
+      {/* Submit Button */}
+      <button
+        type="submit"
+        disabled={!isFormValid}
+        className={`px-4 py-2 bg-blue-500 text-white rounded ${!isFormValid && "opacity-50 cursor-not-allowed"}`}
+      >
+        Submit 
       </button>
-
-      {message && <div className="mt-4 p-2 bg-green-100 border border-green-400 text-green-700 rounded">{message}</div>}
-      {errorMessage && <div className="mt-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">{errorMessage}</div>}
     </form>
   );
-}
+  
+};
+
+export default QuestionsForm;
