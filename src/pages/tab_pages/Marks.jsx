@@ -1,9 +1,17 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import SolutionForm from "../../Forms/SolutionForm";
+import ViewSolutions from '../ViewSolutions';
 
 export default function Marks() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("view");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const handleSuccess = (response) => {
+    setSuccessMessage("Solution created successfully!");
+    setTimeout(() => setSuccessMessage(""), 3000);
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -22,15 +30,25 @@ export default function Marks() {
                 activeTab === tab ? "border-b-2 border-white" : "text-gray-200 hover:text-white"
               }`}
             >
-              {tab === "view" ? "View Marks" : tab === "add" ? "Add Marks" : "Edit Marks"}
+              {tab === "view" ? "View Solutions" : tab === "add" ? "Add Solutions" : "Edit Solutions"}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="max-w-2xl bg-white shadow-md rounded-lg mx-auto mt-6 p-6">
-        {activeTab === "view" && <h2 className="text-lg font-semibold">📊 View Marks</h2>}
-        {activeTab === "add" && <h2 className="text-lg font-semibold">➕ Add Marks (Coming Soon...)</h2>}
+      <div className="max-w-4xl bg-white shadow-md rounded-lg mx-auto mt-6 p-6">
+        {successMessage && (
+          <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">
+            {successMessage}
+          </div>
+        )}
+
+        {activeTab === "view" && <ViewSolutions />}
+        {activeTab === "add" && (
+          <>
+            <SolutionForm onSuccess={handleSuccess} />
+          </>
+        )}
         {activeTab === "edit" && <h2 className="text-lg font-semibold">✏️ Edit Marks (Coming Soon...)</h2>}
       </div>
     </div>

@@ -41,7 +41,7 @@ export default function Reports() {
 
       {/* Students List */}
       <div className="max-w-7xl bg-white shadow-md rounded-lg mx-auto mt-6 p-6">
-        <h2 className="text-lg font-semibold mb-4">📊Students Reports</h2>
+        <h2 className="text-lg font-semibold mb-4">📊Tests Reports</h2>
         <div className="px-6 flex justify-end">
           <button
             onClick={() => setShowNewReport(true)}

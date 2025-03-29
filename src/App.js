@@ -11,6 +11,7 @@ import Students from './pages/tab_pages/Students';
 import Classes from './pages/tab_pages/Classes';
 import Batches from './pages/tab_pages/Batches';
 import Tests from './pages/tab_pages/Tests';
+import ReportsByMonth from './pages/reports_related/ReportsByMonth';
 import Questions from './pages/tab_pages/Questions';
 import Marks from './pages/tab_pages/Marks';
 import Reports from './pages/tab_pages/Reports';
@@ -43,6 +44,7 @@ function App() {
         <Route path="/classes" element={<Classes />} />
         <Route path="/batches" element={<Batches />} />
         <Route path="/tests" element={<Tests />} />
+        <Route path="/reportsbymonth" element={<ReportsByMonth />} />
         <Route path="/questions" element={<Questions />} />
         <Route path="/marks" element={<Marks />} />
         <Route path="/reports" element={<Reports />} />

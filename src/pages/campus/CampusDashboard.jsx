@@ -13,7 +13,7 @@ const dashboardItems = [
   { name: "Attendance", icon: "📅", path: "/attendance" },
   { name: "Noticeboard", icon: "📌", path: "/noticeboard" },
   { name: "Admission", icon: "📨", path: "/admission" },
-  { name: "Feedback", icon: "💬", path: "/feedback" },
+  { name: "Feedback", icon: "⭐", path: "/feedback" },
 ];
 
 export default function CampusDashboard() {

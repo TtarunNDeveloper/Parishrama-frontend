@@ -2,24 +2,24 @@ import React, { useState, useEffect, useCallback } from "react";
 import {useDropzone} from  "react-dropzone";
 import axios from "axios";
 
-const QuestionsForm = () => {
-  const [subjects, setSubjects] = useState([]);
+const QuestionsForm = () => {const [subjects, setSubjects] = useState([]);
   const [chapters, setChapters] = useState([]);
   const [subtopics, setSubtopics] = useState([]);
-  
+  const [refresh, setRefresh] = useState(false);
+
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedChapter, setSelectedChapter] = useState("");
   const [selectedSubtopic, setSelectedSubtopic] = useState("");
-  const [newSubjects, setNewSubjects] = useState([]); 
-  const [newChapters, setNewChapters] = useState([]); 
-  const [newSubtopics, setNewSubtopics] = useState([]); 
+  const [newSubjects, setNewSubjects] = useState([]);
+  const [newChapters, setNewChapters] = useState([]);
+  const [newSubtopics, setNewSubtopics] = useState([]);
   const [inputValues, setInputValues] = useState({
     subject: "",
     chapter: "",
     subtopic: "",
-  });  
+  });
   const [questionType, setQuestionType] = useState("");
-  const [question, setQuestion] =useState("");
+  const [question, setQuestion] = useState("");
   const [formData, setFormData] = useState({
     questionText: "",
     questionImage: null,
@@ -34,66 +34,129 @@ const QuestionsForm = () => {
 
   useEffect(() => {
     fetchSubjects();
-  }, []);
+  }, [refresh]);
 
   const fetchSubjects = async () => {
     try {
-      const response = await axios.get("/api/subjects");
-      setSubjects(response.data);
+      const response = await axios.get("http://localhost:5000/api/getsubjects");
+
+      console.log("API Response:", response.data);
+
+      if (response.data && Array.isArray(response.data.data)) {
+        setSubjects(response.data.data);
+      } else {
+        console.error("Invalid API response format:", response.data);
+        setSubjects([]);
+      }
     } catch (error) {
       console.error("Error fetching subjects", error);
+      setSubjects([]);
     }
   };
 
-  const fetchChapters = async (subjectId) => {
+  const fetchChapters = async (subject) => {
+    if (!subject) return;
+
     try {
-      const response = await axios.get(`/api/chapters/${subjectId}`);
-      setChapters(response.data);
+      const response = await axios.get(`http://localhost:5000/api/getchapters?subject=${subject}`);
+
+      console.log("API Response:", response.data);
+
+      if (response.data && Array.isArray(response.data.data)) {
+        setChapters(response.data.data);
+      } else {
+        console.error("Invalid API response format:", response.data);
+        setChapters([]);
+      }
     } catch (error) {
       console.error("Error fetching chapters", error);
+      setChapters([]);
     }
   };
 
-  const fetchSubtopics = async (chapterId, subjectId) => {
-    if (!chapterId || !subjectId) {
-        console.error("❌ Missing chapterId or subjectId:", { chapterId, subjectId });
-        return;
+  const fetchSubtopics = async (chapter, subject) => {
+    if (!chapter || !subject) {
+      console.error("❌ Missing chapter or subject:", { chapter, subject });
+      return;
     }
 
     try {
-        const response = await axios.get(`/api/subtopics/${chapterId}/${subjectId}`);
-        setSubtopics(response.data);
-        console.log("✅ Fetched subtopics:", response.data);
+      const response = await axios.get(`/api/getsubtopics?subject=${subject}&chapter=${chapter}`);
+      setSubtopics(response.data.data);
+      console.log("✅ Fetched subtopics:", response.data.data);
     } catch (error) {
-        console.error("❌ Error fetching subtopics", error);
+      console.error("❌ Error fetching subtopics", error);
     }
-};
-  const handleAddItem = (type) => {
+  };
+
+  const handleAddItem = async (type) => {
     const value = inputValues[type].trim();
     if (!value) return;
 
     const newItem = { _id: Date.now().toString(), name: value };
 
-    if (type === "subject") setNewSubjects((prev) => [...prev, newItem]);
-    if (type === "chapter") setNewChapters((prev) => [...prev, newItem]);
-    if (type === "subtopic") setNewSubtopics((prev) => [...prev, newItem]);
+    if (type === "subject") {
+      try {
+        const response = await axios.post("http://localhost:5000/api/createsubject", {
+          subjectName: value,
+        });
+        setSubjects((prev) => [...prev, response.data.data]);
+        setRefresh((prev) => !prev);
+      } catch (error) {
+        console.error("error adding subject", error);
+      }
+    }
+    if (type === "chapter") {
+      if (!selectedSubject) {
+        console.error("No subject selected for the chapter.");
+        return;
+      }
+
+      try {
+        const response = await axios.post("http://localhost:5000/api/createchapter", {
+          chapterName: value,
+          subject: selectedSubject.subjectName,
+        });
+
+        setChapters((prev) => [...prev, response.data.data]);
+        setRefresh((prev) => !prev);
+      } catch (error) {
+        console.error("Error adding chapter", error);
+      }
+    }
+    if (type === "subtopic") {
+      try {
+        const response = await axios.post("http://localhost:5000/api/createsubtopic", {
+          subtopicName: value,
+          subject: selectedSubject.subjectName,
+          chapter: selectedChapter.chapterName,
+        });
+        setSubtopics((prev) => [...prev, response.data.data]);
+        setRefresh((prev) => !prev);
+      } catch (error) {
+        console.error("error adding subject", error);
+      }
+    }
 
     setInputValues({ ...inputValues, [type]: "" });
   };
-  
-  const handleSelectionChange = (type, value) => {
+
+  const handleSelectionChange = async (type, value) => {
     if (type === "subject") {
-      setSelectedSubject(value);
+      const selectedSubj = subjects.find((subj) => subj._id === value);
+      setSelectedSubject(selectedSubj || null);
+
       setSelectedChapter("");
       setSelectedSubtopic("");
       setChapters([]);
       setSubtopics([]);
-      if (value) fetchChapters(value);
+
+      if (selectedSubj) await fetchChapters(selectedSubj.subjectName);
     } else if (type === "chapter") {
       setSelectedChapter(value);
       setSelectedSubtopic("");
       setSubtopics([]);
-      if (value) fetchSubtopics(value);
+      if (value) await fetchSubtopics(value, selectedSubject.subjectName);
     } else if (type === "subtopic") {
       setSelectedSubtopic(value);
     }
@@ -107,15 +170,14 @@ const QuestionsForm = () => {
     const { name, value } = e.target;
     if (name.startsWith("option")) {
       const key = name.split("_")[1];
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         options: { ...prev.options, [key]: value },
       }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
-  
 
   const handleOptionChange = (key, value) => {
     setFormData((prev) => ({
@@ -123,7 +185,6 @@ const QuestionsForm = () => {
       options: { ...prev.options, [key]: value },
     }));
   };
-  
 
   const handleFileUpload = useCallback((file, field) => {
     if (file) {
@@ -139,7 +200,6 @@ const QuestionsForm = () => {
     onDrop: (acceptedFiles) => handleFileUpload(acceptedFiles[0], "questionImage"),
   });
 
-  // Dropzone for Solution Image
   const {
     getRootProps: getSolutionRootProps,
     getInputProps: getSolutionInputProps,
@@ -147,7 +207,6 @@ const QuestionsForm = () => {
     accept: "image/*",
     onDrop: (acceptedFiles) => handleFileUpload(acceptedFiles[0], "solutionImage"),
   });
-  
 
   const validateForm = () => {
     let newErrors = {};
@@ -188,7 +247,6 @@ const QuestionsForm = () => {
       if (value) formDataToSend.append(`optionImages[${key}]`, value);
     });
 
-    // **Debugging Logs**
     console.log("📌 Form Data being sent:");
     console.log("Subject ID:", selectedSubject);
     console.log("Chapter ID:", selectedChapter);
@@ -197,13 +255,12 @@ const QuestionsForm = () => {
     console.log("Form Data:", formDataToSend);
 
     try {
-      await axios.post("http://localhost:5000/api/questions", formDataToSend);
+      await axios.post("http://localhost:5000/api/createquestions", formDataToSend);
       alert("✅ Question added successfully!");
     } catch (error) {
       console.error("❌ Error submitting question", error);
     }
-};
-  return (
+  };return (
     <form
       onSubmit={handleSubmit}
       className="p-6 border border-gray-300 rounded-lg shadow-lg bg-white max-w-4xl mx-auto"
@@ -213,57 +270,92 @@ const QuestionsForm = () => {
         {/* Subject */}
         <div>
           <label className="block text-gray-700 font-medium mb-1">Subject</label>
-          <input type="text" value={inputValues.subject}
+
+          {/* Text Input */}
+          <input
+            type="text"
+            value={inputValues.subject}
             onChange={(e) => handleInputChange("subject", e)}
             placeholder="Type or select a subject"
-            className="mb-2 p-2 border-gray-600 border"
+            className="mb-2 p-2 border-gray-600 border w-full"
           />
+
+          {/* Always Enabled Dropdown */}
           <select
-            onChange={(e) => handleSelectionChange("subject", e.target.value)}
+            value={inputValues.subject} // ✅ Set selected value in the dropdown
+            onChange={(e) => {
+              const selectedSubject = subjects.find((subj) => subj._id === e.target.value);
+              if (selectedSubject) {
+                setInputValues({ ...inputValues, subject: selectedSubject.subjectName }); // ✅ Update text input
+              }
+            }}
             className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring focus:ring-blue-300 mb-2"
           >
             <option value="">Select Subject</option>
-            {subjects.concat(newSubjects).map((subj) => (
-              <option key={subj._id} value={subj._id}>
-                {subj.name}
-              </option>
-            ))}
+            {subjects
+              .filter((subj) =>
+                subj.subjectName.toLowerCase().includes(inputValues.subject.toLowerCase())
+              )
+              .map((subj) => (
+                <option key={subj._id} value={subj._id}>
+                  {subj.subjectName}
+                </option>
+              ))}
           </select>
-          {inputValues.subject && !subjects.concat(newSubjects).some((s) => s.name === inputValues.subject) && (
-            <button type="button" onClick={() => handleAddItem("subject")} className="bg-red-500 text-white p-1">
-              Dont worry, Add It!
-            </button>
-          )}
+
+          {/* Show Add It! button only if user input doesn't exist in the list */}
+          {inputValues.subject &&
+            !subjects.some((s) => s.subjectName.toLowerCase() === inputValues.subject.toLowerCase()) && (
+              <button
+                type="button"
+                onClick={() => handleAddItem("subject")}
+                className="bg-red-500 text-white p-2 mt-2 rounded-md"
+              >
+                Don't worry, Add It!
+              </button>
+            )}
         </div>
-  
         {/* Chapter */}
         <div>
           <label className="block text-gray-700 font-medium mb-1">Chapter</label>
+
+          {/* Input Field for Typing Chapter Name */}
           <input
-          type="text"
-          value={inputValues.chapter}
-          onChange={(e) => handleInputChange("chapter", e)}
-          placeholder="Type or select a chapter"
-          className="mb-2 p-2 border-gray-600 border"
+            type="text"
+            value={inputValues.chapter}
+            onChange={(e) => handleInputChange("chapter", e)}
+            placeholder="Type or select a chapter"
+            className="mb-2 p-2 border-gray-600 border w-full"
           />
+
+          {/* Dropdown to Select an Existing Chapter */}
           <select
             onChange={(e) => handleSelectionChange("chapter", e.target.value)}
             className="w-full border border-gray-300 rounded-md p-2 disabled:bg-gray-200 focus:outline-none focus:ring focus:ring-blue-300 mb-2"
           >
             <option value="">Select Chapter</option>
-            {chapters.concat(newChapters).map((chap) => (
-              <option key={chap._id} value={chap._id}>
-                {chap.name}
-              </option>
-            ))}
+            {chapters
+              .filter((chap) => chap.subject === selectedSubject?._id) // Filter chapters for the selected subject
+              .concat(newChapters)
+              .map((chap) => (
+                <option key={chap._id} value={chap._id}>
+                  {chap.chapterName} {/* Use `chapterName` instead of `name` */}
+                </option>
+              ))}
           </select>
-          {inputValues.chapter && !chapters.concat(newChapters).some((c) => c.name === inputValues.chapter) && (
-            <button type="button" onClick={() => handleAddItem("chapter")} className="bg-orange-500 text-white p-1">
-              Uh Chill, Add this too!.
-            </button>
-          )}
+
+          {/* Button to Add a New Chapter if it Doesn't Exist */}
+          {inputValues.chapter &&
+            !chapters.concat(newChapters).some((c) => c.chapterName === inputValues.chapter) && (
+              <button
+                type="button"
+                onClick={() => handleAddItem("chapter")}
+                className="bg-orange-500 text-white p-1 rounded-md mt-2"
+              >
+                Uh Chill, Add this too!
+              </button>
+            )}
         </div>
-  
         {/* Subtopic */}
         <div>
           <label className="block text-gray-700 font-medium mb-1">Subtopic</label>
@@ -271,11 +363,11 @@ const QuestionsForm = () => {
             type="text"
             value={inputValues.subtopic}
             onChange={(e) => handleInputChange("subtopic", e)}
-            placeholder="Type or select a chapter" 
+            placeholder="Type or select a chapter"
             className="mb-2 p-2 border-gray-600 border"
-            />
+          />
           <select
-            onChange={(e) => handleSelectionChange("subtopic", e.target.value)}            
+            onChange={(e) => handleSelectionChange("subtopic", e.target.value)}
             className="w-full border border-gray-300 rounded-md p-2 disabled:bg-gray-200 focus:outline-none focus:ring focus:ring-blue-300 mb-2"
           >
             <option value="">Select Subtopic</option>
@@ -285,13 +377,14 @@ const QuestionsForm = () => {
               </option>
             ))}
           </select>
-          {inputValues.subtopic && !subtopics.concat(newSubtopics).some((c) => c.name === inputValues.subtopic) && (
-            <button type="button" onClick={() => handleAddItem("subtopic")} className="bg-yellow-600 text-white p-1">
-              Oops, might be last one, Add.
-            </button>
-          )}
+          {inputValues.subtopic &&
+            !subtopics.concat(newSubtopics).some((c) => c.name === inputValues.subtopic) && (
+              <button type="button" onClick={() => handleAddItem("subtopic")} className="bg-yellow-600 text-white p-1">
+                Oops, might be last one, Add.
+              </button>
+            )}
         </div>
-  
+
         {/* Question Type */}
         <div>
           <label className="block text-gray-700 font-medium mb-1">Question Type</label>
@@ -305,8 +398,7 @@ const QuestionsForm = () => {
             <option value="Fill in the blanks">Fill in the blanks</option>
           </select>
         </div>
-      </div>
-  
+      </div>  
       {/* Question Section */}
       <div className="border border-gray-300 rounded-md p-4 mb-4">
         <label className="block text-gray-700 font-medium mb-2">Question</label>

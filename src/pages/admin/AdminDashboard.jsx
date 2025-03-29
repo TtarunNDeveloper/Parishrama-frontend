@@ -27,7 +27,7 @@ const dashboardItems = [
   { name: "Hostel", icon: "🛏️", path: "/hostel" },
   { name: "Gate Pass", icon: "🚪", path: "/gatepass" },
   { name: "Admission", icon: "🏛️", path: "/admission" },
-  { name: "Feedback", icon: "💬", path: "/feedback" },
+  { name: "Feedback", icon: "⭐", path: "/feedback" },
   { name: "Leaderboard", icon: "🏅", path: "/leaderboard" },
 ];
 
