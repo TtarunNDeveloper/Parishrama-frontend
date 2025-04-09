@@ -1,49 +1,68 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
-import { useRole } from "../context/RoleContext"; // Import the RoleContext
+import { NavLink, useNavigate } from "react-router-dom";
 import logo from '../assets/logo.png';
 
-const dashboardItems = [
-  { name: "Staffs", path: "/staffs", roles: ["super_admin", "admin"] },
-  { name: "Students", path: "/students", roles: ["super_admin", "admin", "campus", "staff"] },
-  { name: "Classes", path: "/classes", roles: ["super_admin", "admin", "campus", "staff"] },
-  { name: "Batches", path: "/batches", roles: ["super_admin", "admin"] },
-  { name: "Tests", path: "/tests", roles: ["super_admin", "admin", "campus", "staff"] },
-  { name: "Questions", path: "/questions", roles: ["super_admin", "admin", "campus", "staff"] },
-  { name: "Marks", path: "/marks", roles: ["super_admin", "admin", "campus", "staff"] },
-  { name: "Reports", path: "/reports", roles: ["super_admin", "admin", "campus", "staff"] },
-  { name: "Attendance", path: "/attendance", roles: ["super_admin", "admin", "campus", "staff"] },
-  { name: "SMS", path: "/sms", roles: ["super_admin", "admin"] },
-  { name: "Noticeboard", path: "/noticeboard", roles: ["super_admin", "admin"] },
-  { name: "Hospital", path: "/hospital", roles: ["super_admin"] },
-  { name: "Hostel", path: "/hostel", roles: ["super_admin"] },
-  { name: "Gate Pass", path: "/gatepass", roles: ["super_admin"] },
-  { name: "Admission", path: "/admission", roles: ["super_admin", "admin", "campus"] },
-  { name: "Feedback", path: "/feedback", roles: ["super_admin", "admin", "campus", "staff"] },
-  { name: "Leaderboard", path: "/leaderboard", roles: ["super_admin"] },
-  { name: "Settings", path: "/settings", roles: ["super_admin"] },
-];
+const getNavigationItems = (role) => {
+  const commonItems = [
+    { name: "Dashboard", path: "/home", show: true },
+    { name: "Students", path: "students", show: true },
+    { name: "Classes", path: "classes", show: true },
+    { name: "Questions", path: "questions", show: true },
+    { name: "Attendance", path: "attendance", show: true },
+    { name: "Noticeboard", path: "noticeboard", show: true },
+    { name: "Feedback", path: "feedback", show: true },
+    { name: "Leaderboard", path: "leaderboard", show: true }
+  ];
 
-export default function Navigation() {
-  const { role } = useRole(); // Get the role from context
+  const adminItems = [
+    { name: "Batches", path: "batches", show: ["super_admin", "admin", "IT"].includes(role) },
+    { name: "Tests", path: "tests", show: ["super_admin", "admin", "IT"].includes(role) },
+    { name: "Reports", path: "reports", show: ["super_admin", "admin", "IT"].includes(role) },
+    { name: "Solutions", path: "marks", show: ["super_admin", "admin", "IT"].includes(role) },
+    { name: "SMS", path: "sms", show: ["super_admin", "admin", "IT"].includes(role) },
+    { name: "Hospital", path: "hospital", show: ["super_admin", "admin", "IT"].includes(role) },
+    { name: "Hostel", path: "hostel", show: ["super_admin", "admin", "IT"].includes(role) },
+    { name: "Gate Pass", path: "gatepass", show: ["super_admin", "admin", "IT"].includes(role) },
+    { name: "Admission", path: "admission", show: ["super_admin", "admin", "IT"].includes(role) },
+    { name: "Settings", path: "settings", show: ["super_admin", "admin", "IT"].includes(role) },
+    { name: "Staffs", path: "staffs", show: ["super_admin", "admin", "IT"].includes(role) }
+  ];
 
-  const sortedItems = [...dashboardItems]
-    .filter((item) => item.roles.includes(role))
+  // Combine and sort alphabetically
+  return [...commonItems, ...adminItems]
+    .filter(item => item.show === true || item.show)
     .sort((a, b) => a.name.localeCompare(b.name));
+};
+
+export default function Navigation({ userRole, activeTab, setActiveTab }) {
+  const navigate = useNavigate();
+
+  const handleNavigation = (path) => {
+    setTimeout(() => {
+      navigate(path);
+    }, 0);
+  };
 
   return (
-    <div className="w-64 h-screen bg-white text-gray-700 fixed top-0 left-0 p-5 shadow-lg flex flex-col">
+    <div className="w-full h-screen bg-white text-gray-700 p-5 flex flex-col">
       <img src={logo} alt="" className="mx-auto mb-4" />
       <ul className="space-y-2 overflow-y-auto flex-1">
-        {sortedItems.map((item) => (
+        {getNavigationItems(userRole).map((item) => (
           <li key={item.name}>
             <NavLink
               to={item.path}
+              end
               className={({ isActive }) =>
-                `block px-4 py-2 rounded-md hover:bg-gray-700 hover:text-white transition ${
-                  isActive ? "bg-gray-600 text-white" : ""
+                `block px-4 py-2 rounded-md transition-all duration-300 ${
+                  isActive 
+                    ? "bg-gradient-to-r from-red-600 via-orange-500 to-yellow-400 text-white shadow-lg"
+                    : "hover:bg-gradient-to-r hover:from-red-500/20 hover:via-orange-500/20 hover:to-yellow-400/20 hover:text-gray-900"
                 }`
               }
+              onClick={(e) => {
+                e.preventDefault();
+                handleNavigation(item.path);
+              }}
             >
               {item.name}
             </NavLink>

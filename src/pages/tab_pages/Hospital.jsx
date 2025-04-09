@@ -1,27 +1,29 @@
-import React, { useState } from "react";
+//import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import workn from '../../assets/workinprogress.gif';
 
 export default function Hospital() {
   const navigate = useNavigate();
 
-  // State to track active tab
-  const [activeTab, setActiveTab] = useState("hospitals");
+  // // State to track active tab
+  // const [activeTab, setActiveTab] = useState("hospitals");
 
-  // Dummy function to simulate refresh
-  const handleRefresh = () => {
-    alert("Data refreshed successfully!");
-  };
+  // // Dummy function to simulate refresh
+  // const handleRefresh = () => {
+  //   alert("Data refreshed successfully!");
+  // };
 
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Top Section with Gradient */}
       <div className="bg-gradient-to-b from-red-600 via-orange-500 to-yellow-400 text-white py-6 px-8 flex flex-col">
-        <button onClick={() => navigate(-1)} className="text-white text-sm flex items-center mb-2">
+        <button onClick={() => navigate('/home')} className="text-white text-sm flex items-center mb-2">
           ◀ Back to Dashboard
         </button>
         <h1 className="text-3xl font-bold">Hospital Management</h1>
+        <img src={workn} alt="" className="w-auto h-auto"></img>
 
-        {/* Tab Navigation */}
+        {/* Tab Navigation 
         <div className="mt-4 flex space-x-6">
           <button
             onClick={() => setActiveTab("hospitals")}
@@ -38,7 +40,7 @@ export default function Hospital() {
         </div>
       </div>
 
-      {/* Content Section */}
+      {/* Content Section 
       <div className="p-6">
         {activeTab === "hospitals" ? (
           <div>
@@ -61,12 +63,11 @@ export default function Hospital() {
                 🔄 Refresh
               </button>
             </div>
-
-            {/* Form for Hospital Report */}
+            {/* Form for Hospital Report 
             <form className="bg-white p-6 rounded-lg shadow-md mt-4 space-y-4">
-  {/* Select Section & Student */}
+  {/* Select Section & Student 
   <div className="grid grid-cols-2 gap-4">
-    {/* Section Dropdown with Refresh Button */}
+    {/* Section Dropdown with Refresh Button 
     <div className="relative">
       <label className="block text-gray-700">Select Section *</label>
       <div className="flex items-center">
@@ -79,7 +80,7 @@ export default function Hospital() {
       </div>
     </div>
 
-    {/* Student Dropdown */}
+    {/* Student Dropdown 
     <div className="relative">
       <label className="block text-gray-700">Select Student *</label>
       <select className="w-full p-2 border border-gray-300 rounded mt-1" disabled>
@@ -88,9 +89,9 @@ export default function Hospital() {
     </div>
   </div>
 
-  {/* Student Health Issue & Explanation */}
+  {/* Student Health Issue & Explanation 
   <div className="grid grid-cols-2 gap-4">
-    {/* Health Issue with Refresh Button */}
+    {/* Health Issue with Refresh Button 
     <div className="relative">
       <label className="block text-gray-700">Student Health Issue *</label>
       <div className="flex items-center">
@@ -101,16 +102,16 @@ export default function Hospital() {
       </div>
     </div>
 
-    {/* Health Issue Explanation */}
+    {/* Health Issue Explanation 
     <div>
       <label className="block text-gray-700">Student Health Issue Explanation *</label>
       <textarea className="w-full p-2 border border-gray-300 rounded mt-1"></textarea>
     </div>
   </div>
 
-  {/* Hospital Name & Treatment Amount */}
+  {/* Hospital Name & Treatment Amount 
   <div className="grid grid-cols-2 gap-4">
-    {/* Hospital Name with Refresh Button */}
+    {/* Hospital Name with Refresh Button 
     <div className="relative">
       <label className="block text-gray-700">Hospital Name *</label>
       <div className="flex items-center">
@@ -123,22 +124,22 @@ export default function Hospital() {
       </div>
     </div>
 
-    {/* Treatment Amount */}
+    {/* Treatment Amount 
     <div>
       <label className="block text-gray-700">Treatment Amount *</label>
       <input type="text" className="w-full p-2 border border-gray-300 rounded mt-1" placeholder="Hospital Treatment Amount" />
     </div>
   </div>
 
-  {/* Hospital Report File */}
+  {/* Hospital Report File 
   <div>
     <label className="block text-gray-700">Select Hospital Report File</label>
     <input type="file" className="w-full p-2 border border-gray-300 rounded mt-1" />
   </div>
 
-  {/* Staff Attended & Campus Out Time */}
+  {/* Staff Attended & Campus Out Time 
   <div className="grid grid-cols-2 gap-4">
-    {/* Staff Attended */}
+    {/* Staff Attended 
     <div>
       <label className="block text-gray-700">Staff Attended *</label>
       <select className="w-full p-2 border border-gray-300 rounded mt-1">
@@ -146,20 +147,20 @@ export default function Hospital() {
       </select>
     </div>
 
-    {/* Campus Out Time */}
+    {/* Campus Out Time 
     <div>
       <label className="block text-gray-700">Campus Out Time *</label>
       <input type="time" className="w-full p-2 border border-gray-300 rounded mt-1" />
     </div>
   </div>
 
-  {/* Campus In Time */}
+  {/* Campus In Time 
   <div>
     <label className="block text-gray-700">Campus In Time *</label>
     <input type="time" className="w-full p-2 border border-gray-300 rounded mt-1" />
   </div>
 
-  {/* Buttons */}
+  {/* Buttons 
   <div className="flex justify-between mt-4">
     <button type="button" className="bg-gray-400 text-white py-2 px-4 rounded hover:bg-gray-500">
       ❌ Cancel
@@ -173,6 +174,7 @@ export default function Hospital() {
 
           </div>
         )}
+          */}
       </div>
     </div>
   );

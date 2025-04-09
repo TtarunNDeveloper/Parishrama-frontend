@@ -1,53 +1,55 @@
-import React, { useState } from "react";
+//import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import loadingdog from '../../assets/workinprogress.gif';
 
 export default function Hostel() {
   const navigate = useNavigate();
 
-  // State to track active tab
-  const [activeTab, setActiveTab] = useState("hostels");
+  // // State to track active tab
+  // const [activeTab, setActiveTab] = useState("hostels");
 
-  // Sample data for hostels
-  const [hostels, setHostels] = useState([
-    {
-      id: 1,
-      name: "Parishrama Building",
-      floors: 3,
-      rooms: 51,
-      beds: { total: 288, filled: 246, empty: 42 },
-      inCharge: "Hanumantharao Y",
-    },
-    {
-      id: 2,
-      name: "PB (PU)",
-      floors: 3,
-      rooms: 21,
-      beds: { total: 126, filled: 108, empty: 18 },
-      inCharge: "Hanumantharao Y",
-    },
-    {
-      id: 3,
-      name: "PG - 24 (PU)",
-      floors: 4,
-      rooms: 25,
-      beds: { total: 146, filled: 48, empty: 98 },
-      inCharge: "Hanumantharao Y",
-    },
-  ]);
+  // // Sample data for hostels
+  // const [hostels, setHostels] = useState([
+  //   {
+  //     id: 1,
+  //     name: "Parishrama Building",
+  //     floors: 3,
+  //     rooms: 51,
+  //     beds: { total: 288, filled: 246, empty: 42 },
+  //     inCharge: "Hanumantharao Y",
+  //   },
+  //   {
+  //     id: 2,
+  //     name: "PB (PU)",
+  //     floors: 3,
+  //     rooms: 21,
+  //     beds: { total: 126, filled: 108, empty: 18 },
+  //     inCharge: "Hanumantharao Y",
+  //   },
+  //   {
+  //     id: 3,
+  //     name: "PG - 24 (PU)",
+  //     floors: 4,
+  //     rooms: 25,
+  //     beds: { total: 146, filled: 48, empty: 98 },
+  //     inCharge: "Hanumantharao Y",
+  //   },
+  // ]);
 
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Top Section with Custom Gradient */}
       <div className="bg-gradient-to-b from-red-600 via-orange-500 to-yellow-400 text-white py-6 px-8 flex flex-col">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/home')}
           className="text-white text-sm flex items-center mb-2"
         >
           ◀ Back to Dashboard
         </button>
         <h1 className="text-3xl font-bold">Hostel</h1>
+        <img src={loadingdog} alt=" " className="w-auto h-auto"></img>
 
-        {/* Tab Navigation */}
+        {/* Tab Navigation 
         <div className="mt-4 flex space-x-6">
           <button
             onClick={() => setActiveTab("hostels")}
@@ -76,7 +78,7 @@ export default function Hostel() {
         </div>
       </div>
 
-      {/* Content Section */}
+      {/* Content Section 
       <div className="p-6">
         <div className="flex justify-between items-center">
           <button className="bg-blue-500 text-white py-2 px-4 rounded">📅 2024-25</button>
@@ -85,7 +87,7 @@ export default function Hostel() {
           </button>
         </div>
 
-        {/* Summary Cards */}
+        {/* Summary Cards 
         <div className="grid grid-cols-4 gap-4 my-6">
           <div className="bg-white p-4 rounded-lg shadow text-center">
             <h3 className="text-2xl font-bold">10</h3>
@@ -105,7 +107,7 @@ export default function Hostel() {
           </div>
         </div>
 
-        {/* Hostel List */}
+        {/* Hostel List 
         <div className="space-y-4">
           {hostels.map((hostel) => (
             <div
@@ -135,6 +137,7 @@ export default function Hostel() {
             </div>
           ))}
         </div>
+        */}
       </div>
     </div>
   );

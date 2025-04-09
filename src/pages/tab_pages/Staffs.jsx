@@ -10,7 +10,7 @@ export default function Staffs() {
       {/* Top Section with Gradient */}
       <div className="bg-gradient-to-b from-red-600 via-orange-500 to-yellow-400 text-white py-6 px-8 flex flex-col">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/home')}
           className="text-white text-sm flex items-center mb-2"
         >
           ◀ Back to Dashboard

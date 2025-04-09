@@ -89,7 +89,7 @@ export default function Students() {
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="bg-gradient-to-b from-red-600 via-orange-500 to-yellow-400 text-white py-6 px-8 flex flex-col">
-        <button onClick={() => navigate(-1)} className="text-white text-sm flex items-center mb-2">
+        <button onClick={() => navigate('/home')} className="text-white text-sm flex items-center mb-2">
           ◀ Back to Dashboard
         </button>
         
@@ -105,11 +105,12 @@ export default function Students() {
         <div className="p-6">
           {activeTab === "students" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <h3>(Donot consider) Sample Students Data - For Testing</h3><br/>
               {students.map((student, index) => (
                 <div
                   key={index}
                   className="bg-white shadow-md rounded-lg flex items-center p-4 cursor-pointer hover:bg-gray-50"
-                  onClick={() => navigate(`/student/${student.regNo}`)}
+                  onClick={() => navigate(`/home/student/${student.regNo}`)}
                 >
                   <img
                     src={student.profilePic}

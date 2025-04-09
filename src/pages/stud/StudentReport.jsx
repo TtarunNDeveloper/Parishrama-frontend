@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { format, parseISO } from 'date-fns';
-import DatePicker from 'react-datepicker';
+//import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { Calendar as CalendarIcon } from 'react-feather';
+//import { Calendar as CalendarIcon } from 'react-feather';
 import ReportCard from '../../download/ReportCard';
 
 const StudentReport = ({ onClose }) => {
@@ -188,7 +188,7 @@ const StudentReport = ({ onClose }) => {
         </div>
 
         {/* Date Range Pickers */}
-        <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">
               From Date
@@ -232,7 +232,7 @@ const StudentReport = ({ onClose }) => {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Status Message */}

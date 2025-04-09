@@ -97,7 +97,7 @@ export default function AllTests() {
   }, [selectedStream]);
 
   const handleViewData = (testName, date) => {
-    navigate(`/reportsbymonth`, { 
+    navigate(`/home/reportsbymonth`, { 
       state: { 
         testName,
         date,

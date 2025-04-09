@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import waitimg from '../../assets/workinprogress.gif'
 
 export default function Batches() {
   const navigate = useNavigate();
@@ -10,14 +11,14 @@ export default function Batches() {
       {/* Top Section with Gradient */}
       <div className="bg-gradient-to-b from-red-600 via-orange-500 to-yellow-400 text-white py-6 px-8 flex flex-col">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/home')}
           className="text-white text-sm flex items-center mb-2"
         >
           ◀ Back to Dashboard
         </button>
         <h1 className="text-3xl font-bold">Batches</h1>
-
-        {/* Tab Navigation */}
+        <img src={waitimg} alt="" className="w-64 h-62"></img>
+        {/* Tab Navigation 
         <div className="mt-4 flex space-x-6">
           {["all", "create", "edit"].map((tab) => (
             <button
@@ -33,7 +34,6 @@ export default function Batches() {
         </div>
       </div>
 
-      {/* Conditional Rendering Based on Active Tab */}
       <div className="max-w-2xl bg-white shadow-md rounded-lg mx-auto mt-6 p-6">
         {activeTab === "all" && (
           <>
@@ -57,6 +57,7 @@ export default function Batches() {
             </form>
           </>
         )}
+        */}
 
         {activeTab === "edit" && <h2 className="text-lg font-semibold">✏️ Edit Batch (Coming Soon...)</h2>}
       </div>
