@@ -213,14 +213,13 @@ const SolutionForm = ({ onSuccess }) => {
                 )}
                 <div className="mt-3">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Correct Solution
+                    Correct Solution(optional)
                   </label>
                   <textarea
                     value={formData.solutions[index]?.correctSolution || ""}
                     onChange={(e) => handleSolutionChange(index, 'correctSolution', e.target.value)}
                     className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    rows={3}
-                    required
+                    rows={3}                
                   />
                 </div>
               </div>
