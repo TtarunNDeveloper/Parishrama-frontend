@@ -5,7 +5,6 @@ import ParishramaHomePage from './pages/HomePage';
 import Dashboard from './pages/Dashboard';
 import Staffs from './pages/tab_pages/Staffs';
 import Students from './pages/tab_pages/Students';
-import Classes from './pages/tab_pages/Classes';
 import Batches from './pages/tab_pages/Batches';
 import Tests from './pages/tab_pages/Tests';
 import ReportsByMonth from './pages/reports_related/ReportsByMonth';
@@ -24,10 +23,21 @@ import Leaderboard from './pages/tab_pages/Leaderboard';
 import Settings from './pages/admin/Settings.jsx';
 import StudentData from './pages/stud/StudentData';
 import StudentReport from './pages/stud/StudentReport';
+import { ToastContainer } from 'react-toastify';
 
 function App() {
   return (
     <div className='h-screen'>
+      <ToastContainer 
+      position="top-right"
+      autoClose={5000}
+      hideProgressBar={false}
+      newestOnTop={false}
+      closeOnClick
+      rtl={false}
+      pauseOnFocusLoss
+      draggable
+      pauseOnHover />
       <Router>
         <Routes>
           <Route path="/" element={<Login />} />
@@ -40,7 +50,6 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="staffs" element={<Staffs />} />
           <Route path="students" element={<Students />} />
-          <Route path="classes" element={<Classes />} />
           <Route path="batches" element={<Batches />} />
           <Route path="tests" element={<Tests />} />
           <Route path="reportsbymonth" element={<ReportsByMonth />} />

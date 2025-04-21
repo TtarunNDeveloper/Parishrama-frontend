@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function ViewSolutions() {
   const [filters, setFilters] = useState({
@@ -11,19 +13,21 @@ export default function ViewSolutions() {
   const [testNames, setTestNames] = useState([]);
   const [solutions, setSolutions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   // Fetch test names when stream changes
   useEffect(() => {
     const fetchTestNames = async () => {
       try {
+        toast.info("Loading test names...", { autoClose: 2000 });
         const response = await axios.get(
           `${process.env.REACT_APP_URL}/api/getsolutionbank?stream=${filters.stream}`
         );
         const uniqueTestNames = [...new Set(response.data.data.map(item => item.solutionRef.testName))];
         setTestNames(uniqueTestNames);
+        toast.dismiss();
       } catch (err) {
-        setError("Failed to fetch test names");
+        toast.error("Failed to load test names. Please try again.");
+        console.error("Test names fetch error:", err);
       }
     };
     fetchTestNames();
@@ -37,27 +41,40 @@ export default function ViewSolutions() {
   const handleSearch = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setSolutions([]);
 
     try {
+      toast.info("Searching for solutions...");
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
 
       const response = await axios.get(`${process.env.REACT_APP_URL}/api/getsolutionbank?${params.toString()}`);
+      console.log("API Response:", response.data); // Add this line
+      
       const sortedSolutions = response.data.data.sort((a, b) => a.questionNumber - b.questionNumber);
+      
+      if (sortedSolutions.length === 0) {
+        toast.info("No solutions found matching your criteria");
+      } else {
+        toast.success(`Found ${sortedSolutions.length} solutions`);
+      }
+      
       setSolutions(sortedSolutions);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to fetch solutions");
-      setSolutions([]);
+      const errorMsg = err.response?.data?.message || "Failed to fetch solutions. Please try again.";
+      toast.error(errorMsg);
+      console.error("Solutions fetch error:", err);
     } finally {
       setLoading(false);
+      toast.dismiss();
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-100">
+      
       <div className="bg-gradient-to-b from-red-600 via-orange-500 to-yellow-400 text-white py-6 px-8 flex flex-col">
         <h1 className="text-3xl font-bold">View Solutions</h1>
       </div>
@@ -128,25 +145,27 @@ export default function ViewSolutions() {
             <button
               type="submit"
               disabled={loading}
-              className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${loading ? 'opacity-50' : ''}`}
+              className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-b from-red-600 via-orange-500 to-yellow-400 hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${loading ? 'opacity-50' : ''}`}
             >
-              {loading ? 'Searching...' : 'Search Solutions'}
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Searching...
+                </span>
+              ) : 'Search Solutions'}
             </button>
           </div>
         </form>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md border border-red-200">
-            {error}
-          </div>
-        )}
 
         {solutions.length > 0 ? (
           <div className="space-y-6">
             <h2 className="text-lg font-semibold">Solutions Found: {solutions.length}</h2>
             <div className="space-y-4">
               {solutions.map((solution, index) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4">
+                <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-medium">Question {solution.questionNumber}</h3>
@@ -160,21 +179,38 @@ export default function ViewSolutions() {
                   </div>
                   
                   {solution.solutionRef.questionType === "MCQ" && (
-                    <div className="mt-2">
-                      <p className="text-sm font-medium text-gray-700">Correct Option:</p>
-                      <div className="flex space-x-4 mt-1">
-                        {['A', 'B', 'C', 'D'].map(opt => (
-                          <span 
-                            key={opt}
-                            className={`px-3 py-1 rounded ${solution.correctOption === opt ? 'bg-green-100 text-green-800 border border-green-200' : 'text-gray-700'}`}
-                          >
-                            {opt}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
+    <div className="mt-2">
+        <p className="text-sm font-medium text-gray-700">Correct Option(s):</p>
+        <div className="flex space-x-4 mt-1">
+            {['A', 'B', 'C', 'D'].map(opt => {
+                const isCorrect = solution.correctOptions 
+                    ? solution.correctOptions.includes(opt) 
+                    : solution.correctOption === opt; // Fallback to singular if plural doesn't exist
+                
+                return (
+                    <span 
+                        key={opt}
+                        className={`px-3 py-1 rounded ${
+                            isCorrect
+                                ? 'bg-green-100 text-green-800 border border-green-200' 
+                                : 'text-gray-700'
+                        }`}
+                    >
+                        {opt}
+                        {isCorrect && (
+                            <span className="ml-1 text-green-600">✓</span>
+                        )}
+                    </span>
+                );
+            })}
+        </div>
+        {solution.correctOptions && solution.correctOptions.length > 1 && (
+            <p className="mt-1 text-xs text-gray-500">
+                Multiple correct options: {solution.correctOptions.join(', ')}
+            </p>
+        )}
+    </div>
+)}
                   <div className="mt-2">
                     <p className="text-sm font-medium text-gray-700">Correct Solution:</p>
                     <p className="mt-1 p-2 bg-gray-50 rounded">{solution.correctSolution}</p>
@@ -184,7 +220,7 @@ export default function ViewSolutions() {
             </div>
           </div>
         ) : (
-          !loading && <p className="text-center text-gray-500">No solutions found. Apply filters to search.</p>
+          !loading && <p className="text-center text-gray-500 py-8">No solutions found. Apply filters to search.</p>
         )}
       </div>
     </div>

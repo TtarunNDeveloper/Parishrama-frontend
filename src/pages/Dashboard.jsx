@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import batchesIcon from '../assets/batches.png';
-import classesIcon from '../assets/classes.png';
+//import classesIcon from '../assets/classes.png';
 import admissionicon from '../assets/admission.png';
 import feedbackicon from '../assets/feedback.png';
 import attendanceicon from '../assets/attendance.png';
@@ -20,7 +20,7 @@ import studentIcon from '../assets/students.png';
 const getDashboardItems = (role) => {
   const commonItems = [
     { name: "Students", icon: <img src={studentIcon} alt="" className="w-10 h-12 inline"/>, path: "students", show: true},
-    { name: "Classes", icon: <img src={classesIcon} alt="" className="w-12 h-10 inline"/>, path: "classes", show: true },
+    //{ name: "Classes", icon: <img src={classesIcon} alt="" className="w-12 h-10 inline"/>, path: "classes", show: true },
     { name: "Questions", icon: "🔢", path: "questions", show: true },
     { name: "Attendance", icon: <img src={attendanceicon} alt="" className="w-12 h-10 inline"/>, path: "attendance", show: true },
     { name: "Noticeboard", icon: <img src={noticeboardIcon} alt="" className="w-12 h-12 inline"/>, path: "noticeboard", show: true },
@@ -29,17 +29,17 @@ const getDashboardItems = (role) => {
   ];
 
   const adminItems = [
-    { name: "Batches", icon:<img src={batchesIcon} alt="" className="w-10 h-10 inline"/> , path: "batches", show: ["super_admin", "admin", "IT"].includes(role) },
-    { name: "Tests", icon: <img src={testsIcon} alt="" className="w-12 h-12 inline"/>, path: "tests", show: ["super_admin", "admin", "IT"].includes(role) },
-    { name: "Reports", icon: <img src={reportIcon} alt="" className="w-12 h-10 inline"/>, path: "reports", show: ["super_admin", "admin", "IT"].includes(role) },
-    { name: "SMS", icon: <img src={smsIcon} alt="" className="w-12 h-10 inline"/>, path: "sms", show: ["super_admin", "admin", "IT"].includes(role) },
-    { name: "Hospital", icon: <img src={hospitalIcon} alt="" className="w-12 h-10 inline"/>, path: "hospital", show: ["super_admin", "admin", "IT"].includes(role) },
-    { name: "Hostel", icon: <img src={hostelIcon} alt="" className="w-12 h-10 inline"/>, path: "hostel", show: ["super_admin", "admin", "IT"].includes(role) },
-    { name: "Solutions", icon: "🔠", path: "marks", show:  ["super_admin", "admin", "IT"].includes(role) },
-    { name: "Gate Pass", icon: <img src={gatepassicon} alt="" className="w-10 h-12 inline"/>, path: "gatepass", show: ["super_admin", "admin", "IT"].includes(role) },
-    { name: "Admission", icon: <img src={admissionicon} alt="" className="w-12 h-10 inline"/>, path: "admission", show: ["super_admin", "admin", "IT"].includes(role) },
-    { name: "Settings", icon: <img src={settingsIcon} alt="" className="w-12 h-12 inline"/>, path: "settings", show: ["super_admin", "admin", "IT"].includes(role) },
-    { name: "Staffs", icon: <img src={staffIcon} alt="" className="w-10 h-12 inline"/>, path: "staffs", show: ["super_admin", "admin", "IT"].includes(role) }
+    { name: "Campus", icon:<img src={batchesIcon} alt="" className="w-10 h-10 inline"/> , path: "batches", show: ["super_admin", "admin", "IT"].includes(role) },
+    { name: "Tests", icon: <img src={testsIcon} alt="" className="w-12 h-12 inline"/>, path: "tests", show: ["super_admin", "admin"].includes(role) },
+    { name: "Reports", icon: <img src={reportIcon} alt="" className="w-12 h-10 inline"/>, path: "reports", show: ["super_admin", "admin"].includes(role) },
+    { name: "SMS", icon: <img src={smsIcon} alt="" className="w-12 h-10 inline"/>, path: "sms", show: ["super_admin", "admin"].includes(role) },
+    { name: "Hospital", icon: <img src={hospitalIcon} alt="" className="w-12 h-10 inline"/>, path: "hospital", show: ["super_admin", "admin"].includes(role) },
+    { name: "Hostel", icon: <img src={hostelIcon} alt="" className="w-12 h-10 inline"/>, path: "hostel", show: ["super_admin", "admin", "counseller"].includes(role) },
+    { name: "Solutions", icon: "🔠", path: "marks", show:  ["super_admin", "admin"].includes(role) },
+    { name: "Gate Pass", icon: <img src={gatepassicon} alt="" className="w-10 h-12 inline"/>, path: "gatepass", show: ["super_admin", "admin"].includes(role) },
+    { name: "Admission", icon: <img src={admissionicon} alt="" className="w-12 h-10 inline"/>, path: "admission", show: ["super_admin", "admin", "counseller"].includes(role) },
+    { name: "Settings", icon: <img src={settingsIcon} alt="" className="w-12 h-12 inline"/>, path: "settings", show: ["super_admin", "admin"].includes(role) },
+    { name: "Staffs", icon: <img src={staffIcon} alt="" className="w-10 h-12 inline"/>, path: "staffs", show: ["super_admin", "admin", "counseller"].includes(role) }
   ];
 
   return [...commonItems, ...adminItems]

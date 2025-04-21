@@ -21,7 +21,7 @@ const StudentReport = ({ onClose }) => {
 
   // Validate roll number is exactly 5 digits
   useEffect(() => {
-    setIsValidRollNo(/^\d{5}$/.test(formData.rollNo));
+    setIsValidRollNo(/^\d{6}$/.test(formData.rollNo));
   }, [formData.rollNo]);
 
   const handleChange = (e) => {
@@ -130,7 +130,7 @@ const StudentReport = ({ onClose }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="col-span-1">
           <label className="block text-sm font-medium text-gray-700">
-            Roll Number (5 digits)
+            Roll Number (6 digits)
           </label>
           <div className="mt-1 flex rounded-md shadow-sm">
             <input
@@ -138,7 +138,7 @@ const StudentReport = ({ onClose }) => {
               name="rollNo"
               value={formData.rollNo}
               onChange={handleChange}
-              maxLength="5"
+              maxLength="6"
               pattern="\d{5}"
               className="flex-1 block w-full border border-gray-300 rounded-l-md py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               placeholder="12345"

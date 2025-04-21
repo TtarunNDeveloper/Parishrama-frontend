@@ -1,20 +1,32 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import underconstr from '../../assets/workinprogress.gif'
+import AdmissionForm from "../../Forms/AdmissionForm";
+import StudentData from "../stud/StudentData";
+import StudentSettings from "../stud/StudentSettings";
 
 export default function Admissions() {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("registrations");
 
   // Admission categories
   const admissionSections = [
-    { id: 1, name: "Registrations", icon: "📝", path: "/admissions/registrations", image:underconstr },
-    { id: 2, name: "Enquiry", icon: "❓", path: "/admissions/enquiry", image:underconstr },
-    { id: 3, name: "Leads", icon: "📊", path: "/admissions/leads", image:underconstr },
-    { id: 4, name: "Counselling", icon: "💬", path: "/admissions/counselling", image:underconstr },
-    { id: 5, name: "Applications", icon: "📄", path: "/admissions/applications", image:underconstr },
-    { id: 6, name: "Admitted", icon: "🎓", path: "/admissions/admitted", image:underconstr },
-    { id: 7, name: "Settings", icon: "⚙️", path: "/admissions/settings", image:underconstr },
+    { id: 1, name: "Registrations", icon: "📝", path: "registrations" },
+    { id: 2, name: "Admitted", icon: "🎓", path: "admitted" },
+    { id: 3, name: "Settings", icon: "⚙️", path: "settings" },
   ];
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case "registrations":
+        return <AdmissionForm />;
+      case "admitted":
+        return <StudentData />;
+      case "settings":
+        return <StudentSettings />;
+      default:
+        return <AdmissionForm />;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -31,34 +43,26 @@ export default function Admissions() {
 
       {/* Admission Sections */}
       <div className="p-6">
-        <h2 className="text-xl font-semibold text-gray-700">Manage Admissions</h2>
-        <p className="text-gray-500 mb-4">Choose a category to manage admissions.</p>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="flex space-x-4 mb-6">
           {admissionSections.map((section) => (
-            <div
-            key={section.id}
-            className="group relative bg-white shadow-md rounded-lg p-6 flex flex-col items-center cursor-pointer overflow-hidden h-40"
-            onClick={() => navigate(section.path)}
-          >
-            {/* Always visible content */}
-            <div className="z-10 flex flex-col items-center transition-all duration-300 group-hover:scale-110 group-hover:text-white">
-              <span className="text-4xl">{section.icon}</span>
-              <p className="text-lg font-medium mt-2">{section.name}</p>
-            </div>
-            
-            {/* Image background that appears on hover */}
-            <div className="absolute inset-0 transition-all duration-500 opacity-0 group-hover:opacity-100">
-              <img 
-                src={section.image}
-                alt={section.name}
-                className="w-full h-full object-cover rounded-lg"
-              />
-              {/* Color overlay to maintain readability */}
-              <div className="absolute inset-0 bg-gradient-to-br from-red-600/60 via-orange-500/60 to-yellow-400/60 rounded-lg"></div>
-            </div>
-          </div>
+            <button
+              key={section.id}
+              onClick={() => setActiveTab(section.path)}
+              className={`px-6 py-2 rounded-lg font-medium ${
+                activeTab === section.path
+                  ? "bg-gradient-to-b from-red-600 via-orange-500 to-yellow-400 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              <span className="mr-2">{section.icon}</span>
+              {section.name}
+            </button>
           ))}
+        </div>
+
+        {/* Content Area */}
+        <div className="bg-white shadow-md rounded-lg p-6">
+          {renderContent()}
         </div>
       </div>
     </div>

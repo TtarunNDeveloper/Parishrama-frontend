@@ -19,6 +19,8 @@ export default function NewReport({ onClose }) {
   const [fileData, setFileData] = useState(null);
   const [parsedData, setParsedData] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [editableRegNumbers, setEditableRegNumbers] = useState({});
+  const [showAllInvalid, setShowAllInvalid] = useState(false);
 
   // Marks type options
   const marksTypeOptions = [
@@ -132,13 +134,12 @@ export default function NewReport({ onClose }) {
       return;
     }
   
-    // Enhanced column detection
     const firstRow = data[0] || {};
     const regNoKey = Object.keys(firstRow).find(key => 
       key.match(/^(regno|rollno|registration|id)/i)
     );
     
-    // Dynamically detect ALL question columns (Q1, Q2,... Q100+)
+    // Find all question columns and determine total questions
     const questionKeys = Object.keys(firstRow)
       .filter(key => key.match(/^q\d+$/i))
       .sort((a, b) => {
@@ -146,43 +147,56 @@ export default function NewReport({ onClose }) {
         const numB = parseInt(b.replace(/\D/g, ''));
         return numA - numB;
       });
-
+  
     if (!regNoKey) {
-      setError("File must contain student ID column (RegNo/RollNo/Registration/ID)");
+      setError("File must contain student ID column");
       setParsedData([]);
       return;
     }
-
+  
     if (questionKeys.length === 0) {
       setError("File must contain question columns (Q1, Q2, etc.)");
       setParsedData([]);
       return;
     }
-
+  
     try {
+      // Determine the maximum question number from column headers
+      const maxQuestionNum = questionKeys.reduce((max, key) => {
+        const num = parseInt(key.replace(/\D/g, ''));
+        return num > max ? num : max;
+      }, 0);
+  
       const processed = data.map(row => {
-        const markedOptions = {};
-        const unmarkedOptions = [];
+        const questionAnswer = {};
         
-        questionKeys.forEach(key => {
-          const qNum = key.replace(/\D/g, '');
-          const answer = row[key];
-          
-          if (answer !== null && answer !== undefined && String(answer).trim() !== '') {
-            markedOptions[qNum] = String(answer).trim().toUpperCase();
-          } else {
-            unmarkedOptions.push(parseInt(qNum));
-          }
-        });
-
+        // Initialize all questions from 1 to maxQuestionNum
+        for (let i = 1; i <= maxQuestionNum; i++) {
+          const qKey = `Q${i}`;
+          const answer = row[qKey];
+          questionAnswer[i] = answer && String(answer).trim() !== '' 
+            ? String(answer).trim().toUpperCase() 
+            : '';
+        }
+  
         return {
           regNumber: row[regNoKey],
-          markedOptions,
-          unmarkedOptions
+          questionAnswer,
+          totalQuestions: maxQuestionNum
         };
       });
-
+  
       setParsedData(processed);
+      
+      // Initialize editable reg numbers for invalid formats
+      const invalidRegNumbers = {};
+      processed.forEach((row, index) => {
+        if (!/^\d{6}$/.test(String(row.regNumber).trim())) {
+          invalidRegNumbers[index] = row.regNumber;
+        }
+      });
+      setEditableRegNumbers(invalidRegNumbers);
+      
       setError("");
     } catch (err) {
       setError("Error processing file data");
@@ -191,45 +205,88 @@ export default function NewReport({ onClose }) {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      // Validate required fields
-      if (!formData.questionType || !formData.testName || !formData.date || !formData.marksType) {
-        throw new Error("All fields are required");
-      }
-
-      if (parsedData.length === 0) {
-        throw new Error("Please upload and parse a valid file first");
-      }
-
-      const payload = {
-        stream: formData.stream,
-        questionType: formData.questionType,
-        testName: formData.testName,
-        date: formData.date,
-        marksType: formData.marksType,
-        reportBank: parsedData
-      };
-
-      const response = await axios.post(
-        `${process.env.REACT_APP_URL}/api/createreport`,
-        payload
-      );
-
-      if (response.data.status === "success") {
-        alert("Report created successfully!");
-        onClose();
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || "Failed to create report");
-    } finally {
-      setLoading(false);
-    }
+  const handleRegNumberChange = (index, value) => {
+    setEditableRegNumbers(prev => ({
+      ...prev,
+      [index]: value
+    }));
   };
+
+  const updateParsedDataWithEdits = () => {
+    const updatedData = [...parsedData];
+    Object.entries(editableRegNumbers).forEach(([index, value]) => {
+      updatedData[index].regNumber = value;
+    });
+    setParsedData(updatedData);
+    setEditableRegNumbers({});
+  };
+
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
+
+  try {
+    // Validate fields
+    if (!formData.questionType || !formData.testName || !formData.date || !formData.marksType) {
+      throw new Error("All fields are required");
+    }
+
+    if (parsedData.length === 0) {
+      throw new Error("Please upload a valid file first");
+    }
+
+    // Check invalid reg numbers
+    const invalidRegNumbers = parsedData.filter(
+      row => !/^\d{6}$/.test(String(row.regNumber).trim())
+    );
+    
+    if (invalidRegNumbers.length > 0) {
+      throw new Error(`There are ${invalidRegNumbers.length} invalid registration numbers`);
+    }
+
+    const payload = {
+      stream: formData.stream,
+      questionType: formData.questionType,
+      testName: formData.testName,
+      date: formData.date,
+      marksType: formData.marksType,
+      reportBank: parsedData // Now using questionAnswer format directly
+    };
+
+    const response = await axios.post(
+      `${process.env.REACT_APP_URL}/api/createreport`,
+      payload
+    );
+
+    if (response.data.status === "success") {
+      alert("Report created successfully!");
+      onClose();
+    }
+  } catch (err) {
+    setError(err.response?.data?.message || err.message || "Failed to create report");
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // Get invalid registration numbers
+  const invalidRegNumbers = parsedData
+    .map((row, index) => ({ 
+      index, 
+      regNumber: row.regNumber,
+      isValid: /^\d{6}$/.test(String(row.regNumber).trim())
+    }))
+    .filter(item => !item.isValid);
+
+  // Get valid registration numbers (for preview)
+  const validRegNumbers = parsedData
+    .map((row, index) => ({ 
+      index, 
+      regNumber: row.regNumber,
+      isValid: /^\d{6}$/.test(String(row.regNumber).trim())
+    }))
+    .filter(item => item.isValid);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -383,50 +440,105 @@ export default function NewReport({ onClose }) {
               </div>
             </div>
 
-            {/* Preview Section */}
-            {parsedData.length > 0 && (
+            {/* Invalid Registration Numbers Section */}
+            {invalidRegNumbers.length > 0 && (
               <div className="mt-6">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">
-                  Preview (First 5 Rows)
-                </h3>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 border">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">
-                          RegNo
-                        </th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">
-                          Marked Options
-                        </th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">
-                          Unmarked Questions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {parsedData.slice(0, 5).map((row, rowIndex) => (
-                        <tr key={rowIndex}>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 border">
-                            {row.regNumber}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-500 border">
-                            {Object.entries(row.markedOptions).map(([q, ans]) => (
-                              <span key={q} className="mr-2">
-                                Q{q}:{ans}
-                              </span>
-                            ))}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-500 border">
-                            {row.unmarkedOptions.join(', ')}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-sm font-medium text-gray-700">
+                    Invalid Registration Numbers ({invalidRegNumbers.length} found)
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowAllInvalid(!showAllInvalid)}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    {showAllInvalid ? "Show Less" : "Show All"}
+                  </button>
+                </div>
+                <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
+                  <p className="text-sm text-yellow-700 mb-3">
+                    Please correct the following registration numbers (must be 6 digits):
+                  </p>
+                  <div className="space-y-2">
+                    {(showAllInvalid ? invalidRegNumbers : invalidRegNumbers.slice(0, 6)).map((item) => (
+                      <div key={item.index} className="flex items-center space-x-2">
+                        <span className="text-sm font-medium w-24">Row {item.index + 1}:</span>
+                        <input
+                          type="text"
+                          value={editableRegNumbers[item.index] !== undefined ? editableRegNumbers[item.index] : item.regNumber}
+                          onChange={(e) => handleRegNumberChange(item.index, e.target.value)}
+                          className="px-2 py-1 border border-gray-300 rounded-md text-sm w-32"
+                        />
+                        <span className="text-sm text-gray-500">
+                          Original: {item.regNumber}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={updateParsedDataWithEdits}
+                    className="mt-3 px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                  >
+                    Apply Changes
+                  </button>
                 </div>
               </div>
             )}
+
+            {/* Preview Section */}
+            {validRegNumbers.length > 0 && (
+  <div className="mt-6">
+    <h3 className="text-sm font-medium text-gray-700 mb-2">
+      Valid Records Preview (First 5 Rows) - Total Questions: {parsedData[0]?.totalQuestions || 'N/A'}
+    </h3>
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-gray-200 border">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">
+              RegNo
+            </th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">
+              Attempted
+            </th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">
+              Sample Answers
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {validRegNumbers.slice(0, 5).map((item) => {
+            const row = parsedData[item.index];
+            const attempted = Object.values(row.questionAnswer).filter(a => a !== '').length;
+            const total = row.totalQuestions || Object.keys(row.questionAnswer).length;
+            
+            // Get first 5 non-empty answers for preview
+            const sampleAnswers = Object.entries(row.questionAnswer)
+              .filter(([_, ans]) => ans !== '')
+              .slice(0, 5)
+              .map(([q, ans]) => `Q${q}:${ans}`)
+              .join(', ');
+
+            return (
+              <tr key={item.index}>
+                <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 border">
+                  {row.regNumber}
+                </td>
+                <td className="px-3 py-2 text-sm text-gray-500 border">
+                  {attempted}/{total}
+                </td>
+                <td className="px-3 py-2 text-sm text-gray-500 border">
+                  {sampleAnswers}{sampleAnswers.length === 0 ? 'None' : ''}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
 
             <div className="flex justify-end space-x-3 pt-6">
               <button
@@ -438,9 +550,9 @@ export default function NewReport({ onClose }) {
               </button>
               <button
                 type="submit"
-                disabled={loading || isUploading || testNames.length === 0}
+                disabled={loading || isUploading || testNames.length === 0 || invalidRegNumbers.length > 0}
                 className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                  loading || isUploading || testNames.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+                  loading || isUploading || testNames.length === 0 || invalidRegNumbers.length > 0 ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               >
                 {loading ? "Creating Report..." : "Create Report"}

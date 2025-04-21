@@ -109,7 +109,7 @@ export default function AllTests() {
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="bg-gradient-to-b from-red-600 via-orange-500 to-yellow-400 text-white py-6 px-8 flex flex-col">
-        <h1 className="text-3xl font-bold">All Tests</h1>
+        <h1 className="text-3xl font-bold">All Reports</h1>
       </div>
 
       {/* Stream Selection Radio Buttons */}

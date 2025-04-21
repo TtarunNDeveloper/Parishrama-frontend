@@ -173,7 +173,7 @@ export default function Settings() {
                       >
                         <option value="staff">Staff</option>
                         <option value="admin">Admin</option>
-                        <option value="IT">IT</option>
+                        <option value="counseller">Counseller</option>
                         <option value="super_admin">Super Admin</option>
                       </select>
                     </td>

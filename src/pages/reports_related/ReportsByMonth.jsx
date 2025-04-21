@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
+import crown from "../../assets/crown.png"
 import * as XLSX from "xlsx";
 
 export default function ReportsByMonth() {
@@ -105,75 +106,133 @@ export default function ReportsByMonth() {
     fetchData();
   }, [testName, date, stream, navigate]);
 
-  const calculateResults = (reports, solutions, marksType) => {
-    const results = [];
-    const totalQuestions = solutions.length;
-    
-    const solutionMap = {};
-    solutions.forEach(sol => {
-      solutionMap[sol.questionNumber] = sol.correctOption;
-    });
-    
-    reports.forEach(report => {
-      let corrAns = 0;
-      let wroAns = 0;
-      let totalMarks = 0;
-      
-      const unattemptedCount = report.unmarkedOptions ? 
-        (Array.isArray(report.unmarkedOptions) ? report.unmarkedOptions.length : 
-         typeof report.unmarkedOptions === 'object' ? Object.keys(report.unmarkedOptions).length :
-         0) : 0;
-
-      const markedOptions = report.markedOptions || {};
-      Object.entries(markedOptions).forEach(([qNum, markedOption]) => {
-        const correctOption = solutionMap[parseInt(qNum)];
-        if (correctOption === undefined) return;
+  //ranking
+  const renderRankBadge = (rank) => {
+    if (rank === 1) {
+      return (
+        <span className="ml-2 bg-yellow-600 text-white px-2 py-1 rounded-full text-xs inline-flex items-center">
+          TOP 1
+          <img src={crown} className="w-3 h-3 ml-1 -mt-px" alt="crown" />
+        </span>
+      );
+    }
+    if (rank === 2) {
+      return (
+        <span className="ml-2 bg-gray-500 text-white px-2 py-1 rounded-full text-xs">
+          TOP 2
+        </span>
+      );
+    }
+    if (rank === 3) {
+      return (
+        <span className="ml-2 bg-yellow-700 text-white px-2 py-1 rounded-full text-xs">
+          TOP 3
+        </span>
+      );
+    }
+    return null;
+  };
   
-        if (markedOption === correctOption) {
+  // Enhanced calculateResults function in ReportsByMonth.jsx
+const calculateResults = (reports, solutions, marksType) => {
+  const results = [];
+  const totalQuestions = solutions.length;
+  
+  // Determine marking scheme
+  const isCompetitive = marksType.includes("+4");
+  const correctMark = isCompetitive ? 4 : 1;
+  const wrongMark = isCompetitive ? -1 : 0;
+  
+  reports.forEach(report => {
+    let corrAns = 0;
+    let wroAns = 0;
+    let totalMarks = 0;
+    let unattemptedCount = 0;
+    
+    // Ensure questionAnswers is in object format
+    const questionAnswers = report.questionAnswers instanceof Map 
+      ? Object.fromEntries(report.questionAnswers) 
+      : report.questionAnswers || {};
+    
+    // Process each solution/question
+    solutions.forEach(solution => {
+      const qNum = solution.questionNumber.toString();
+      const markedOption = questionAnswers[qNum];
+      
+      if (markedOption && markedOption.trim() !== '') {
+        // Check if marked option matches any correct option (supports multiple correct answers)
+        if (solution.correctOptions.includes(markedOption)) {
           corrAns++;
-          // Use the marksType from the report for calculations
-          totalMarks += marksType.includes("+4") ? 4 : 1;
+          totalMarks += correctMark;
         } else {
           wroAns++;
-          totalMarks += marksType.includes("-1") ? -1 : 0;
+          totalMarks += wrongMark;
         }
-      });
-            
-      const accuracy = totalQuestions > 0 ? (corrAns/(corrAns+wroAns))*100 : 0;
-      const maxPossibleMarks = totalQuestions * (marksType.includes("+4") ? 4 : 1);
-      const percentage = maxPossibleMarks > 0 ? (totalMarks / maxPossibleMarks) * 100 : 0;
-      
-      results.push({
-        regNumber: report.regNumber,
-        correctAnswers: corrAns,
-        wrongAnswers: wroAns,
-        unattempted: unattemptedCount,
-        totalMarks,
-        accuracy,
-        percentage,
-        percentile: 0,
-        date: report.date
-      });
+      } else {
+        unattemptedCount++;
+      }
     });
     
-    if (results.length > 0) {
-      const sortedByMarks = [...results].sort((a, b) => b.totalMarks - a.totalMarks);
-      sortedByMarks.forEach((result, index) => {
-        result.percentile = ((sortedByMarks.length - index - 1) / sortedByMarks.length) * 100;
-      });
-      
-      const resultMap = {};
-      sortedByMarks.forEach((res, idx) => {
-        resultMap[res.regNumber] = res.percentile;
-      });
-      
-      results.forEach(res => {
-        res.percentile = resultMap[res.regNumber];
-      });
+    // Calculate metrics
+    const accuracy = corrAns + wroAns > 0 
+      ? (corrAns / (corrAns + wroAns)) * 100 
+      : 0;
+    
+    const maxPossibleMarks = totalQuestions * correctMark;
+    const percentage = maxPossibleMarks > 0 
+      ? (totalMarks / maxPossibleMarks) * 100 
+      : 0;
+    
+    results.push({
+      regNumber: report.regNumber,
+      correctAnswers: corrAns,
+      wrongAnswers: wroAns,
+      unattempted: unattemptedCount,
+      totalMarks,
+      accuracy,
+      percentage,
+      percentile: 0, // Will be calculated later
+      date: report.date,
+      rank: 0 // Temporary, will be calculated later
+    });
+  });
+
+  // Calculate ranks and percentiles
+  if (results.length > 0) {
+    // Sort by marks descending
+    const sortedByMarks = [...results].sort((a, b) => b.totalMarks - a.totalMarks);
+    
+    // Calculate ranks with tie handling
+    let currentRank = 1;
+    for (let i = 0; i < sortedByMarks.length; i++) {
+      if (i > 0 && sortedByMarks[i].totalMarks < sortedByMarks[i-1].totalMarks) {
+        currentRank = i + 1;
+      }
+      sortedByMarks[i].rank = currentRank;
     }
     
-    return results;
-  };
+    // Calculate percentiles
+    const totalStudents = sortedByMarks.length;
+    sortedByMarks.forEach(result => {
+      result.percentile = ((totalStudents - result.rank) / totalStudents) * 100;
+    });
+    
+    // Map back to original results
+    const percentileMap = {};
+    const rankMap = {};
+    sortedByMarks.forEach(res => {
+      percentileMap[res.regNumber] = res.percentile;
+      rankMap[res.regNumber] = res.rank;
+    });
+    
+    results.forEach(res => {
+      res.percentile = percentileMap[res.regNumber] || 0;
+      res.rank = rankMap[res.regNumber] || 0;
+    });
+  }
+  
+  return results;
+};
 
   const handleSubmit = async (date, marksType) => {
     try {
@@ -194,6 +253,11 @@ export default function ReportsByMonth() {
           throw new Error(`No results found for student ${report.regNumber}`);
         }
   
+        // Convert questionAnswer to object if it's a Map
+        const questionAnswers = report.questionAnswers instanceof Map 
+          ? Object.fromEntries(report.questionAnswers) 
+          : report.questionAnswers || {};
+  
         const safeNumber = (value) => typeof value === 'number' ? value.toString() : value;
   
         const payload = {
@@ -207,13 +271,14 @@ export default function ReportsByMonth() {
           wrongAnswers: safeNumber(studentResult.wrongAnswers),
           unattempted: safeNumber(studentResult.unattempted),
           accuracy: safeNumber(studentResult.accuracy.toFixed(2)),
+          percentage:safeNumber(studentResult.percentage.toFixed(2)),
           percentile: safeNumber(studentResult.percentile.toFixed(2)),
           totalMarks: safeNumber(studentResult.totalMarks),
           responses: solutions.map(solution => ({
             questionNumber: safeNumber(solution.questionNumber),
-            markedOption: report.markedOptions?.[solution.questionNumber] ?? null,
-            correctOption: solution.correctOption,
-            isCorrect: report.markedOptions?.[solution.questionNumber] === solution.correctOption
+            markedOption: questionAnswers[solution.questionNumber] || null,
+            correctOptions: solution.correctOptions,
+            isCorrect: solution.correctOptions.includes(questionAnswers[solution.questionNumber] || '')
           }))
         };
   
@@ -313,32 +378,53 @@ export default function ReportsByMonth() {
           </div>
           
           <div className="overflow-x-auto mb-4">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reg No</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wrong</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unattempted</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Correct</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Marks</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accuracy</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentile</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {dateResults.map((result, index) => (
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reg No</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attempted</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Correct</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wrong</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Marks</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accuracy</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentile</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {dateResults.map((result, index) => {
+                const attempted = result.correctAnswers + result.wrongAnswers;
+                const totalQuestions = solutions.length;
+                
+                return (
                   <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{result.regNumber}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm bg-red-600 text-white font-semibold">{result.wrongAnswers}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm bg-yellow-500 text-white font-semibold">{result.unattempted}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm bg-green-600 text-white font-semibold">{result.correctAnswers}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black font-semibold">{result.totalMarks}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black font-semibold">{result.accuracy.toFixed(2)}%</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black font-semibold">{result.percentage.toFixed(2)}%</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black font-semibold">{result.percentile.toFixed(2)}%</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {result.regNumber} {renderRankBadge(result.rank)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {attempted}/{totalQuestions}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm bg-green-600 text-white font-semibold">
+                      {result.correctAnswers}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm bg-red-600 text-white font-semibold">
+                      {result.wrongAnswers}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
+                      {result.totalMarks}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {result.accuracy.toFixed(2)}%
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black font-semibold">
+                      {result.percentage.toFixed(2)}%
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black font-semibold">
+                      {result.percentile.toFixed(2)}%
+                    </td>
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           </div>
@@ -410,10 +496,10 @@ export default function ReportsByMonth() {
         <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
           <div className="text-red-500 mb-4">{error}</div>
           <button
-            onClick={() => navigate('/home/tests')}
+            onClick={() => navigate('/home/reports')}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
           >
-            Back to Tests
+            Back to Reports
           </button>
         </div>
       </div>
@@ -428,10 +514,10 @@ export default function ReportsByMonth() {
             <h1 className="text-2xl font-bold">{testName}</h1>
           </div>
           <button
-            onClick={() => navigate("/home/tests")}
+            onClick={() => navigate("/home/reports")}
             className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
           >
-            Back to Tests
+            Back to Reports
           </button>
         </div>
 

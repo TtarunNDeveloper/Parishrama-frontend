@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import SolutionForm from "../../Forms/SolutionForm";
+import EditSolutionsForm from "../../Forms/EditSolutionsForm";
 import ViewSolutions from '../ViewSolutions';
+import ViewPatterns from '../ViewPatterns';
 
 export default function Marks() {
   const navigate = useNavigate();
@@ -9,7 +11,7 @@ export default function Marks() {
   const [successMessage, setSuccessMessage] = useState("");
 
   const handleSuccess = (response) => {
-    setSuccessMessage("Solution created successfully!");
+    setSuccessMessage(response.message || "Operation completed successfully!");
     setTimeout(() => setSuccessMessage(""), 3000);
   };
 
@@ -21,16 +23,19 @@ export default function Marks() {
         </button>
         <h1 className="text-3xl font-bold">Marks</h1>
 
-        <div className="mt-4 flex space-x-6">
-          {["view", "add", "edit"].map((tab) => (
+        <div className="mt-4 flex space-x-6 overflow-x-auto">
+          {["view", "add", "edit", "patterns"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-1 capitalize ${
+              className={`pb-1 capitalize whitespace-nowrap ${
                 activeTab === tab ? "border-b-2 border-white" : "text-gray-200 hover:text-white"
               }`}
             >
-              {tab === "view" ? "View Solutions" : tab === "add" ? "Add Solutions" : "Edit Solutions"}
+              {tab === "view" ? "View Solutions" : 
+               tab === "add" ? "Add Solutions" : 
+               tab === "edit" ? "Edit Solutions" : 
+               "Patterns"}
             </button>
           ))}
         </div>
@@ -44,12 +49,9 @@ export default function Marks() {
         )}
 
         {activeTab === "view" && <ViewSolutions />}
-        {activeTab === "add" && (
-          <>
-            <SolutionForm onSuccess={handleSuccess} />
-          </>
-        )}
-        {activeTab === "edit" && <h2 className="text-lg font-semibold">✏️ Edit Marks (Coming Soon...)</h2>}
+        {activeTab === "add" && <SolutionForm onSuccess={handleSuccess} />}
+        {activeTab === "edit" && <EditSolutionsForm onSuccess={handleSuccess} />}
+        {activeTab === "patterns" && <ViewPatterns />}
       </div>
     </div>
   );
