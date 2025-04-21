@@ -21,7 +21,7 @@ export default function Reports() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [showNewReport, setShowNewReport] = useState(false);
-  const [streamFilter, setStreamFilter] = useState("LongTerm");
+  const [streamFilter, setStreamFilter] = useState("PUC");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTest, setSelectedTest] = useState(null);
   const [tests, setTests] = useState([]);
