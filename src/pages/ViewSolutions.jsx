@@ -161,68 +161,102 @@ export default function ViewSolutions() {
         </form>
 
         {solutions.length > 0 ? (
-          <div className="space-y-6">
-            <h2 className="text-lg font-semibold">Solutions Found: {solutions.length}</h2>
-            <div className="space-y-4">
-              {solutions.map((solution, index) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+        <div className="space-y-6">
+          <h2 className="text-lg font-semibold">Solutions Found: {solutions.length}</h2>
+          <div className="space-y-4">
+            {solutions.map((solution, index) => (
+              <div 
+                key={index} 
+                className={`border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow relative 
+                  overflow-hidden ${solution.isGrace ? 'bg-gray-100/60' : 'bg-white'}`}
+              >
+                {/* Grace Stamp Overlay */}
+                {solution.isGrace && (
+                  <>
+                    <div className="absolute inset-0 bg-white/30 backdrop-blur-[1px] z-0"></div>
+                    <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                      <div className="transform rotate-[-10deg]">
+                        <span className="text-5xl font-bold text-green-600/60 tracking-widest border-4 border-green-600/50 rounded-lg px-6 py-2">
+                          GRACED
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="relative z-20"> {/* Content wrapper to stay above stamp */}
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-medium">Question {solution.questionNumber}</h3>
-                      <p className="text-sm text-gray-500">
+                      <h3 className={`font-medium text-lg ${solution.isGrace ? 'text-gray-700' : 'text-gray-900'}`}>
+                        Question {solution.questionNumber}
+                      </h3>
+                      <p className={`text-sm ${solution.isGrace ? 'text-gray-600' : 'text-gray-500'}`}>
                         Stream: {solution.solutionRef.stream}
                       </p>
                     </div>
-                    <span className="text-sm text-gray-500">
+                    <span className={`text-sm ${solution.isGrace ? 'text-gray-600' : 'text-gray-500'}`}>
                       {solution.solutionRef.testName} - {new Date(solution.solutionRef.date).toLocaleDateString()}
                     </span>
                   </div>
                   
                   {solution.solutionRef.questionType === "MCQ" && (
-    <div className="mt-2">
-        <p className="text-sm font-medium text-gray-700">Correct Option(s):</p>
-        <div className="flex space-x-4 mt-1">
-            {['A', 'B', 'C', 'D'].map(opt => {
-                const isCorrect = solution.correctOptions 
-                    ? solution.correctOptions.includes(opt) 
-                    : solution.correctOption === opt; // Fallback to singular if plural doesn't exist
-                
-                return (
-                    <span 
-                        key={opt}
-                        className={`px-3 py-1 rounded ${
-                            isCorrect
-                                ? 'bg-green-100 text-green-800 border border-green-200' 
-                                : 'text-gray-700'
-                        }`}
-                    >
-                        {opt}
-                        {isCorrect && (
-                            <span className="ml-1 text-green-600">✓</span>
-                        )}
-                    </span>
-                );
-            })}
-        </div>
-        {solution.correctOptions && solution.correctOptions.length > 1 && (
-            <p className="mt-1 text-xs text-gray-500">
-                Multiple correct options: {solution.correctOptions.join(', ')}
-            </p>
-        )}
-    </div>
-)}
-                  <div className="mt-2">
-                    <p className="text-sm font-medium text-gray-700">Correct Solution:</p>
-                    <p className="mt-1 p-2 bg-gray-50 rounded">{solution.correctSolution}</p>
+                    <div className="mt-3">
+                      <p className={`text-sm font-medium ${solution.isGrace ? 'text-gray-700' : 'text-gray-700'}`}>
+                        Correct Option(s):
+                      </p>
+                      <div className="flex space-x-4 mt-1">
+                        {['A', 'B', 'C', 'D'].map(opt => {
+                          const isCorrect = solution.correctOptions?.includes(opt) || 
+                                          solution.correctOption === opt;
+                          
+                          return (
+                            <span 
+                              key={opt}
+                              className={`px-3 py-1 rounded-lg text-lg font-medium ${
+                                isCorrect
+                                  ? solution.isGrace
+                                    ? 'bg-green-200/80 text-green-900 border-2 border-green-400/80'
+                                    : 'bg-green-100 text-green-400 border border-green-200'
+                                  : 'text-gray-700 bg-gray-100'
+                              }`}
+                            >
+                              {opt}
+                              {isCorrect && (
+                                <span className={`ml-1 ${solution.isGrace ? 'text-green-800' : 'text-green-400'}`}>
+                                  ✓
+                                </span>
+                              )}
+                            </span>
+                          );
+                        })}
+                      </div>
+                      {solution.correctOptions?.length > 1 && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          Multiple correct options: {solution.correctOptions.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mt-3">
+                    <p className={`text-sm font-medium ${solution.isGrace ? 'text-gray-700' : 'text-gray-700'}`}>
+                      Correct Solution:
+                    </p>
+                    <div className={`mt-1 p-3 rounded-lg ${solution.isGrace ? 'bg-white/80 border border-green-200/50' : 'bg-gray-50'}`}>
+                      <p className={solution.isGrace ? 'text-gray-800' : 'text-gray-700'}>
+                        {solution.correctSolution}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        ) : (
-          !loading && <p className="text-center text-gray-500 py-8">No solutions found. Apply filters to search.</p>
-        )}
-      </div>
+        </div>
+      ) : (
+        !loading && <p className="text-center text-gray-500 py-8">No solutions found. Apply filters to search.</p>
+      )}
+    </div>
     </div>
   );
 }

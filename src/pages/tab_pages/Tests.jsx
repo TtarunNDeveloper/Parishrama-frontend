@@ -1,10 +1,8 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import NewReport from "../stud/NewReport";
-//import * as XLSX from "xlsx";
 import DatePicker from "react-datepicker";
 import DownloadDropdown from "../../download/DetailedReport";
-import crown from "../../assets/crown.png"
 import "react-datepicker/dist/react-datepicker.css";
 
 const subjectStyles = {
@@ -21,7 +19,7 @@ export default function Reports() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [showNewReport, setShowNewReport] = useState(false);
-  const [streamFilter, setStreamFilter] = useState("PUC");
+  const [streamFilter, setStreamFilter] = useState("LongTerm");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTest, setSelectedTest] = useState(null);
   const [tests, setTests] = useState([]);
@@ -47,11 +45,8 @@ export default function Reports() {
           fetch(`${process.env.REACT_APP_URL}/api/getpatterns`, { headers: { Authorization: `Bearer ${token}` } }),
           fetch(`${process.env.REACT_APP_URL}/api/getstudents`, { headers: { Authorization: `Bearer ${token}` } }),
           fetch(`${process.env.REACT_APP_URL}/api/getsolutionbank`, { headers: { Authorization: `Bearer ${token}` } })
-          
         ]);
-        
 
-        // Process reports for test list
         const reportsData = await reportsRes.json();
         if (reportsData.status === "success" && Array.isArray(reportsData.data)) {
           const uniqueTests = Array.from(new Set(
@@ -64,13 +59,11 @@ export default function Reports() {
           setTests(uniqueTests);
         }
 
-        // Process student reports, patterns, students, and solutions
         const studentReportsData = await studentReportsRes.json();
         const patternsData = await patternsRes.json();
         const studentsData = await studentsRes.json();
         const solutionsData = await solutionsRes.json();
 
-        // Create student map
         const studentMap = {};
         const campusSet = new Set();
         const sectionSet = new Set();
@@ -92,7 +85,6 @@ export default function Reports() {
           setSections(["All", ...Array.from(sectionSet).sort()]);
         }
 
-        // Process detailed reports with accurate subject breakdown
         if (studentReportsData.status === "success" && patternsData.status === "success" && solutionsData.status === "success") {
           const processedData = processDetailedReports(
             studentReportsData.data, 
@@ -113,49 +105,79 @@ export default function Reports() {
     fetchData();
   }, []);
 
+  // Updated processDetailedReports function
   const processDetailedReports = (studentReports, patterns, solutions, studentMap) => {
-    // Create solution map for quick lookup
+    // Create solution map with grace information and correct options
     const solutionMap = {};
     solutions.forEach(sol => {
-      solutionMap[sol.questionNumber] = sol.correctOptions || [];
+      // Handle both array and single value cases for correctOptions
+      const correctOptions = Array.isArray(sol.correctOptions) 
+        ? sol.correctOptions 
+        : sol.correctOption 
+          ? [sol.correctOption] 
+          : [];
+      
+      solutionMap[sol.questionNumber] = {
+        correctOptions,
+        isGrace: sol.isGrace || false
+      };
     });
   
-    // First calculate percentiles
+    // Process each report with pattern matching
     const reportsWithPatterns = studentReports.map(report => {
-      // Clean test name by removing numbers and special characters
       const cleanTestName = report.testName
         .replace(/\d+/g, '')
         .replace(/-/g, '')
         .trim();
       
-      // Find matching pattern
       const pattern = patterns.find(p => 
         p.testName.replace(/\d+/g, '').trim() === cleanTestName && 
         p.type === report.stream
       );
       
       return { report, pattern };
-    }).filter(({ pattern }) => pattern); // Filter out reports without patterns
+    }).filter(({ pattern }) => pattern);
   
-    // Calculate percentiles
-    const sortedByMarks = [...reportsWithPatterns].sort((a, b) => 
-      b.report.totalMarks - a.report.totalMarks
-    );
-    
-    const percentileMap = {};
-    sortedByMarks.forEach(({ report }, index) => {
-      percentileMap[report.regNumber] = parseFloat(
-        ((sortedByMarks.length - index - 1) / sortedByMarks.length * 100).toFixed(2)
-      );
+    // Calculate ranks with proper tie handling
+    const rankedReports = [...reportsWithPatterns].sort((a, b) => {
+      // Primary sort by total marks descending
+      if (b.report.totalMarks !== a.report.totalMarks) {
+        return b.report.totalMarks - a.report.totalMarks;
+      }
+      // Secondary sort by accuracy if marks are equal
+      return b.report.accuracy - a.report.accuracy;
     });
   
-    // Now process each report with accurate subject breakdown
-    return reportsWithPatterns.map(({ report, pattern }) => {
+    // Calculate ranks and percentiles
+    let currentRank = 1;
+    const rankedResults = [];
+    
+    for (let i = 0; i < rankedReports.length; i++) {
+      // Same rank if marks and accuracy are equal to previous
+      if (i > 0 && 
+          rankedReports[i].report.totalMarks === rankedReports[i-1].report.totalMarks &&
+          rankedReports[i].report.accuracy === rankedReports[i-1].report.accuracy) {
+        // Same rank as previous
+      } else {
+        currentRank = i + 1;
+      }
+      
+      const percentile = ((rankedReports.length - currentRank) / rankedReports.length) * 100;
+      
+      rankedResults.push({
+        ...rankedReports[i],
+        rank: currentRank,
+        percentile: parseFloat(percentile.toFixed(2))
+      });
+    }
+  
+    // Process subject breakdown with grace marks
+    return rankedResults.map(({ report, pattern, rank, percentile }) => {
       const marksType = report.marksType || "+4/-1";
       const correctMark = marksType.includes("+4") ? 4 : 1;
       const wrongMark = marksType.includes("-1") ? -1 : 0;
   
-      // Create question to subject mapping
+      // Question to subject mapping
       const questionSubjectMap = {};
       let currentQuestion = 1;
       
@@ -177,52 +199,57 @@ export default function Reports() {
           attempted: 0,
           correct: 0,
           wrong: 0,
-          unattempted: 0, // Add explicit tracking of unattempted questions
+          unattempted: 0,
           marks: 0,
           fullMarks: subject.totalMarks,
-          style: subjectStyles[subjectName] || subjectStyles.default
+          style: subjectStyles[subjectName] || subjectStyles.default,
+          hasGraceQuestions: false // Track if subject has any grace questions
         };
       });
   
-      // Process each response
+      // Process each response with grace mark consideration
       report.responses.forEach(response => {
         const subjectName = questionSubjectMap[response.questionNumber];
         if (!subjectName || !subjectData[subjectName]) return;
   
-        const correctOptions = solutionMap[response.questionNumber] || [];
+        const solution = solutionMap[response.questionNumber] || {};
         subjectData[subjectName].totalQuestions++;
         
-        // Only count as attempted if markedOption exists and isn't empty
         if (response.markedOption && response.markedOption.trim() !== '') {
           subjectData[subjectName].attempted++;
-          const isCorrect = correctOptions.includes(response.markedOption);
           
-          if (isCorrect) {
+          // Grace mark takes precedence
+          if (solution.isGrace) {
+            subjectData[subjectName].correct++;
+            subjectData[subjectName].marks += correctMark;
+            subjectData[subjectName].hasGraceQuestions = true;
+          } else if (solution.correctOptions.includes(response.markedOption)) {
+            // Correct option marked
             subjectData[subjectName].correct++;
             subjectData[subjectName].marks += correctMark;
           } else {
+            // Wrong option marked
             subjectData[subjectName].wrong++;
             subjectData[subjectName].marks += wrongMark;
           }
         } else {
-          // Explicitly track unattempted questions
           subjectData[subjectName].unattempted++;
         }
       });
   
-      // Convert to array format, ensuring totalQuestionsUnattempted is properly calculated
+      // Convert to array format
       const subjects = Object.values(subjectData).map(subject => ({
         subjectName: subject.subjectName,
         totalQuestionsAttempted: subject.attempted,
-        totalQuestionsUnattempted: subject.unattempted, // Use the explicitly tracked value
+        totalQuestionsUnattempted: subject.unattempted,
         correctAnswers: subject.correct,
         wrongAnswers: subject.wrong,
         totalMarks: parseFloat(subject.marks.toFixed(2)),
         fullMarks: subject.fullMarks,
-        style: subject.style
+        style: subject.style,
+        hasGraceQuestions: subject.hasGraceQuestions
       }));
   
-      // Get student info
       const studentInfo = studentMap[report.regNumber] || {};
   
       return {
@@ -239,8 +266,8 @@ export default function Reports() {
         fullMarks: pattern.totalMarks,
         accuracy: report.accuracy,
         percentage: report.percentage,
-        percentile: percentileMap[report.regNumber] || 0,
-        rank: sortedByMarks.findIndex(r => r.report.regNumber === report.regNumber) + 1
+        percentile,
+        rank
       };
     });
   };
@@ -304,13 +331,18 @@ export default function Reports() {
   }
 
   // Render watermarked subject cell
-  const renderSubjectCell = (subject, value) => {
+  const renderSubjectCell = (subject, value, type) => {
+    const isGraceAffected = type === 'correct' && subject.hasGraceQuestions;
+    
     return (
       <td 
-        className="py-2 px-4 border text-center relative"
+        className={`py-2 px-4 border text-center relative ${isGraceAffected ? 'bg-purple-100' : ''}`}
         style={{ backgroundColor: subject.style.background }}
       >
         {value}
+        {isGraceAffected && (
+          <span className="absolute top-0 right-0 text-s font-semibold text-green-600">G</span>
+        )}
         <span className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10 text-4xl">
           {subject.style.watermark}
         </span>
@@ -322,28 +354,6 @@ export default function Reports() {
   const renderSortIndicator = (key) => {
     if (sortConfig.key === key) {
       return sortConfig.direction === "asc" ? "↑" : "↓";
-    }
-    return null;
-  };
-
-  // Render rank badge
-  const renderRankBadge = (rank) => {
-    const baseClasses =
-      "inline-flex items-center gap-1 px-4 py-1 rounded-full text-xs font-medium text-white";
-  
-    if (rank === 1) {
-      return (
-        <span className={`${baseClasses} bg-yellow-600`}>
-          TOP 1
-          <img src={crown} className="w-3 h-3" alt="crown" />
-        </span>
-      );
-    }
-    if (rank === 2) {
-      return <span className={`${baseClasses} bg-gray-500`}>TOP 2</span>;
-    }
-    if (rank === 3) {
-      return <span className={`${baseClasses} bg-yellow-700`}>TOP 3</span>;
     }
     return null;
   };
@@ -553,7 +563,6 @@ export default function Reports() {
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="py-2 px-4 border">
                         <div className="flex items-center gap-2"><span>{report.regNumber}</span>
-                        {renderRankBadge(report.rank)}
                         </div>
                       </td>
                       <td className="py-2 px-4 border">{report.studentName}</td>
@@ -563,11 +572,11 @@ export default function Reports() {
                       {/* Subject-wise data with watermarks */}
                       {report.subjects.map((subject, idx) => (
                         <React.Fragment key={idx}>
-                          {renderSubjectCell(subject, subject.totalQuestionsAttempted)}
-                          {renderSubjectCell(subject, subject.totalQuestionsUnattempted)}
-                          {renderSubjectCell(subject, subject.correctAnswers)}
-                          {renderSubjectCell(subject, subject.wrongAnswers)}
-                          {renderSubjectCell(subject, subject.totalMarks)}
+                          {renderSubjectCell(subject, subject.totalQuestionsAttempted, 'attempted')}
+                          {renderSubjectCell(subject, subject.totalQuestionsUnattempted, 'unattempted')}
+                          {renderSubjectCell(subject, subject.correctAnswers, 'correct')}
+                          {renderSubjectCell(subject, subject.wrongAnswers, 'wrong')}
+                          {renderSubjectCell(subject, subject.totalMarks, 'marks')}
                         </React.Fragment>
                       ))}
                       

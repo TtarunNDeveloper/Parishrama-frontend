@@ -382,7 +382,7 @@ const EditSolutionsForm = ({ onSuccess }) => {
                         htmlFor={`grace-${index}`}
                         className="ml-2 text-sm font-medium text-gray-700"
                       >
-                        Grace (E)
+                        Grace
                       </label>
                     </div>
                   </div>
